@@ -211,7 +211,7 @@ export class Game {
     const o = this.orders.find((x) => x.def.id === orderId);
     if (!o || o.filled || this.phase !== 'play') return false;
     const c = this.creatures.get(id);
-    if (!c || c.loc !== 'belt') return false;
+    if (!c || (c.loc !== 'belt' && c.loc !== 'nest')) return false;
     return this.eligible(o, id);
   }
   /** Phenotype-level fit of a creature for an order (what the player can see), ignoring where it is. */
@@ -223,8 +223,10 @@ export class Game {
       case 'phenotype':
         return matchesPheno(p, req.pheno);
       case 'carrier': {
+        // The village only takes a PROVEN carrier: the card must already show it is heterozygous.
         const dom = GENES[req.gene].phenotype([GENES[req.gene].alleles[0], GENES[req.gene].alleles[1]], c.env);
-        return p[req.gene] === dom;
+        const k = this.known(id, req.gene);
+        return p[req.gene] === dom && (!this.day.autoDeduce || (k.length === 1 && k[0][0] !== k[0][1]));
       }
       case 'purePair':
         return p[req.gene] === req.pheno;
@@ -238,6 +240,11 @@ export class Game {
       case 'parentPheno':
         return matchesPheno(p, req.pheno) && !!c.parents && c.parents.some((pid) => matchesPheno(this.pheno(pid), req.parentPheno));
     }
+  }
+  /** A creature that can fill this order right now: the selected one first, then belt, then nest. */
+  deliverable(orderId: string): string | null {
+    const ids = [this.selected, ...this.belt, ...this.nest].filter((x): x is string => !!x);
+    return ids.find((id) => this.canDeliver(orderId, id)) ?? null;
   }
   allFilled(): boolean {
     return this.orders.every((o) => o.filled);
@@ -362,6 +369,17 @@ export class Game {
     this.creatures.set(child.id, child);
     this.families.push({ a: entry.parents[0], b: entry.parents[1], child: child.id });
     this.hatchLog.push(entry);
+    this.recompute();
+    // A full belt makes room: the oldest baby that fits no open order hops out to the meadow.
+    if (this.belt.length >= BELT_MAX) {
+      const spare = this.belt.find((id) => this.get(id).origin === 'baby' && !this.orders.some((o) => !o.filled && this.eligible(o, id)));
+      if (spare) {
+        this.belt = this.belt.filter((x) => x !== spare);
+        this.get(spare).loc = 'meadow';
+        if (this.selected === spare) this.selected = null;
+        this.emit({ type: 'released', id: spare });
+      }
+    }
     const toBelt = this.belt.length < BELT_MAX;
     child.loc = toBelt ? 'belt' : 'meadow';
     if (toBelt) this.belt.push(child.id);
@@ -376,6 +394,8 @@ export class Game {
 
   private checkEggs() {
     if (this.phase !== 'play' || this.eggs > 0 || this.allFilled()) return;
+    // Not stuck while the ranch already holds what the open orders need.
+    if (this.orders.every((o) => o.filled || this.canStillFill(o))) return;
     const explain = this.explainLuck();
     if (this.day.bonusEggs && !this.bonusGiven) {
       this.bonusGiven = true;
@@ -384,8 +404,7 @@ export class Game {
       this.logL('bonusEggs', String(this.day.bonusEggs), 'granted');
       return;
     }
-    // Eggs gone; the day can still be won if the ranch already holds what's needed.
-    if (this.orders.some((o) => !o.filled && !this.canStillFill(o))) {
+    {
       this.phase = 'outOfEggs';
       this.emit({ type: 'outOfEggs', explainHe: explain });
       this.logL('outOfEggs', String(this.eggsUsed), 'fail');
@@ -440,7 +459,9 @@ export class Game {
       this.logL('deliver', `${orderId}:${c.name}`, certain ? 'wrong-certain?' : 'wrong-guess', hinted);
       return false;
     }
-    // Leaves with the villager.
+    // Leaves with the villager (straight from the nest if it was sitting there).
+    if (this.nest[0] === id) this.nest[0] = null;
+    if (this.nest[1] === id) this.nest[1] = null;
     this.belt = this.belt.filter((x) => x !== id);
     c.loc = 'delivered';
     if (this.selected === id) this.selected = this.belt[0] ?? null;
@@ -457,14 +478,18 @@ export class Game {
             if (x.loc === 'belt') this.belt.push(d);
           }
           o.delivered = [];
+          // The village's own breeding test took time: it costs eggs from your basket.
+          const cost = Math.min(this.eggs, 3);
+          this.eggs -= cost;
           const rec = GENES[req.gene].alleles[1];
           const dom = GENES[req.gene].alleles[0];
           this.emit({
             type: 'wrongDelivery',
             id,
             order: orderId,
-            explainHe: `הכפר גידל את הזוג: הגורים ורודים... אבל בדור הנכדים בקע גור כחול! ${bad.map((b) => b.name).join(' ו')} ${bad.length > 1 ? 'היו נשאים' : 'היה נשא'} (${dom}${rec}) והעביר את ${rec} הלאה.`,
+            explainHe: `הכפר גידל את הזוג: הגורים ורודים... אבל בדור הנכדים בקע גור כחול! ${bad.map((b) => b.name).join(' ו')} ${bad.length > 1 ? 'היו נשאים' : 'היה נשא'} (${dom}${rec}) והעביר את ${rec} הלאה.${cost ? ` הבדיקה של הכפר עלתה ${cost} ביצים.` : ''}`,
           });
+          this.checkEggs();
           this.logL('deliver', `${orderId}`, certain ? 'wrong' : 'wrong-guess', hinted);
           return false;
         }
@@ -497,6 +522,7 @@ export class Game {
     if (o.def.req.kind === 'family' && !c.parents) return 'בתמונה המשפחתית רק גורים שבקעו כאן.';
     if (o.def.req.kind === 'family') return 'צריך אחים מאותם הורים, עם דוגמה שעוד חסרה בתמונה.';
     if (o.def.req.kind === 'parentPheno') return 'צריך גור כחול שאחד מההורים שלו סגול.';
+    if (o.def.req.kind === 'carrier') return `עוד אין הוכחה ש${c.name} נשא. הכפר רוצה לראות גור שמוט שלו.`;
     return 'זה לא מה שהוזמן — הסתכלו בתמונה שעל ההזמנה.';
   }
 

@@ -5,16 +5,16 @@ import { models, propInstance } from './assets';
 
 export const ISLAND_R = 22;
 export const SPAWN = new THREE.Vector3(0, 1.6, 7.6);
-export const SPAWN_LOOK = new THREE.Vector3(0.3, 0.5, 2.0);
-export const NEST_POS = new THREE.Vector3(2.0, 0, 2.6);
+export const SPAWN_LOOK = new THREE.Vector3(-0.2, 0.75, 2.0);
+export const NEST_POS = new THREE.Vector3(0.9, 0, 2.3);
 // Slot 0 is the LEFT parent (its alleles label the Punnett rows on the left), slot 1 the right one.
-export const NEST_SLOTS = [new THREE.Vector3(1.38, 0.32, 2.7), new THREE.Vector3(2.62, 0.32, 2.7)];
+export const NEST_SLOTS = [new THREE.Vector3(0.32, 0.42, 2.4), new THREE.Vector3(1.48, 0.42, 2.4)];
 /** Eggs land and hatch in the middle of the nest, between the parents. */
-export const HATCH_SPOT = new THREE.Vector3(2.0, 0.34, 2.95);
-export const BOARD_POS = new THREE.Vector3(-3.4, 0, 1.6);
-export const VILLAGER_POS = new THREE.Vector3(-2.3, 0, 2.3);
+export const HATCH_SPOT = new THREE.Vector3(0.9, 0.52, 2.75);
+export const BOARD_POS = new THREE.Vector3(-4.6, 0, 1.2);
+export const VILLAGER_POS = new THREE.Vector3(-3.4, 0, 2.0);
 export const BARN_POS = new THREE.Vector3(5.5, 0, -5.5);
-export const MEADOW_CENTER = new THREE.Vector3(-0.6, 0, 3.6);
+export const MEADOW_CENTER = new THREE.Vector3(-1.2, 0, 4.2);
 export const MEADOW_R = 5.5;
 
 export interface Palette {
@@ -516,8 +516,17 @@ export class World {
   }
 
   private buildNest() {
-    const model = propInstance('nest', { width: 2.8 });
-    if (model) this.nest.add(model);
+    const model = propInstance('nest', { width: 2.5, rotX: -Math.PI / 4 });
+    if (model) {
+      // Keep it a low, wide nest so the parents sitting in it stay visible, on a mossy stone.
+      model.scale.y *= 0.55;
+      model.position.y = 0.22;
+      const stone = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.45, 0.34, 28), new THREE.MeshStandardMaterial({ color: '#a9a2b8', roughness: 0.95 }));
+      stone.position.y = 0.17;
+      const moss = new THREE.Mesh(new THREE.CylinderGeometry(1.27, 1.27, 0.06, 28), new THREE.MeshStandardMaterial({ color: '#86c96f', roughness: 1 }));
+      moss.position.y = 0.35;
+      this.nest.add(stone, moss, model);
+    }
     else {
       const stone = new THREE.Mesh(new THREE.CylinderGeometry(1.45, 1.6, 0.3, 24), new THREE.MeshStandardMaterial({ color: '#a8a0b8', roughness: 0.9 }));
       stone.position.y = 0.15;
@@ -568,7 +577,7 @@ export class World {
       g.add(roof);
     }
     const paper = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.56), new THREE.MeshStandardMaterial({ map: this.boardTex, roughness: 0.9 }));
-    paper.position.set(0, 1.75, model ? 0.12 : 0.03);
+    paper.position.set(0, model ? 1.95 : 1.75, model ? 0.4 : 0.03);
     g.add(paper);
     g.position.copy(BOARD_POS);
     g.lookAt(new THREE.Vector3(0.5, 0, 7.6));

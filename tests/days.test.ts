@@ -93,44 +93,22 @@ describe('Day 1 — Big Ears', () => {
 });
 
 describe('Day 2 — The Hidden Carrier', () => {
+  // Test-cross each candidate with Pip (ee): 3 eggs, 3 eggs, then the rest on the last one.
   const smart = (seed: number) => {
     const g = new Game(1, seed);
     catchAll(g);
     const cands = ['tofi', 'motzi', 'shimshi'];
-    for (const c of cands) {
-      if (g.phase !== 'play' || g.orders[0].filled) break;
-      // Elimination: the order says exactly one of three is a carrier.
-      if (c === cands[2]) {
-        g.deliver('carrier', c) || toBelt(g, c);
-        if (!g.orders[0].filled) g.deliver('carrier', c);
-        break;
-      }
+    cands.forEach((c, i) => {
+      if (g.orders[0].filled || g.phase !== 'play') return;
       setNest(g, c, 'pip');
-      for (let i = 0; i < 3 && g.eggs > 0; i++) {
-        const kid = hatchOnce(g);
-        if (kid && g.pheno(kid).ears === 'floppy') break;
-      }
-      if (knownKey(g, c, 'ears') === 'Ee') {
-        g.unplace(0);
-        g.deliver('carrier', c);
-        break;
-      }
-    }
-    // Recover from a mistake by testing what's left.
-    for (const c of cands) {
-      if (g.orders[0].filled || g.phase !== 'play') break;
-      if (g.get(c).loc === 'delivered') continue;
-      setNest(g, c, 'pip');
-      while (g.eggs > 0 && knownKey(g, c, 'ears') !== 'Ee') if (!hatchOnce(g)) break;
-      if (knownKey(g, c, 'ears') === 'Ee') {
-        g.unplace(0);
-        g.deliver('carrier', c);
-      }
-    }
+      for (let k = 0; (i < 2 ? k < 3 : true) && g.eggs > 0 && knownKey(g, c, 'ears') !== 'Ee'; k++) if (!hatchOnce(g)) break;
+      // A proven carrier can be delivered straight from the nest.
+      if (knownKey(g, c, 'ears') === 'Ee') g.deliver('carrier', c);
+    });
     return g;
   };
-  it('a test-cross strategy finds the carrier within 8 eggs', () => {
-    expect(rate((s) => smart(s).phase === 'won')).toBeGreaterThan(0.9);
+  it('a test-cross strategy finds the carrier within 10 eggs', () => {
+    expect(rate((s) => smart(s).phase === 'won')).toBeGreaterThan(0.85);
   });
   it('a floppy baby fills the carrier card (Ee) — proof, not a guess', () => {
     for (let s = 1; s < 50; s++) {
@@ -140,17 +118,16 @@ describe('Day 2 — The Hidden Carrier', () => {
       expect(g.get(delivered).genotype.ears.join('')).toBe('Ee');
     }
   });
-  it('guessing without a test-cross is right only about 1 time in 3, and a wrong guess is called out', () => {
-    let right = 0;
-    let wrongEvents = 0;
-    for (let s = 1; s <= RUNS; s++) {
+  it('guessing is impossible: without a recessive baby as proof the village refuses every candidate', () => {
+    for (let s = 1; s <= 50; s++) {
       const g = new Game(1, s);
       catchAll(g);
-      if (g.deliver('carrier', 'tofi')) right++;
-      else if (g.drainEvents().some((e) => e.type === 'wrongDelivery')) wrongEvents++;
+      for (const c of ['tofi', 'motzi', 'shimshi']) {
+        expect(g.deliver('carrier', c)).toBe(false);
+        expect(g.drainEvents().some((e) => e.type === 'rejected')).toBe(true);
+      }
+      expect(g.mistakes).toBe(0);
     }
-    expect(Math.abs(right / RUNS - 1 / 3)).toBeLessThan(0.08);
-    expect(right + wrongEvents).toBe(RUNS);
   });
 });
 
@@ -202,6 +179,7 @@ describe('Day 3 — Pure Line', () => {
       else {
         expect(g.drainEvents().some((e) => e.type === 'wrongDelivery')).toBe(true);
         expect(g.get('varda').loc).toBe('belt');
+        expect(g.eggs).toBe(DAYS[2].eggs - 3);
       }
     }
     expect(Math.abs(won / RUNS - 1 / 3)).toBeLessThan(0.08);
@@ -377,6 +355,21 @@ describe('game plumbing', () => {
     g.tick(1);
     expect(g.phase).toBe('play');
     expect(g.hatchLog.length).toBe(1);
+  });
+  it('a full belt makes room for a newborn that fits an order', () => {
+    const g = new Game(0, 5);
+    catchAll(g);
+    setNest(g, 'bobo', 'lulu');
+    let floppy: string | null = null;
+    for (let i = 0; i < 12 && !floppy && g.eggs > 0; i++) {
+      g.hatchEgg();
+      g.tick(HATCH_MS);
+      const ev = g.drainEvents().find((e) => e.type === 'hatched');
+      if (ev && ev.type === 'hatched' && g.pheno(ev.id).ears === 'floppy') floppy = ev.id;
+    }
+    expect(floppy).not.toBeNull();
+    expect(g.get(floppy!).loc).toBe('belt');
+    expect(g.canDeliver('floppy', floppy!)).toBe(true);
   });
   it('the belt overflows into the meadow instead of losing babies', () => {
     const g = new Game(3, 1);

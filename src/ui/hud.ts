@@ -53,6 +53,8 @@ export class Hud {
   private keys: Record<string, string> = {};
   private els: Record<string, HTMLElement> = {};
   private toastTimer = 0;
+  /** The latest hatch, explained under the Punnett square (cleared by the next action). */
+  hatchInfo: { id: string; html: string } | null = null;
 
   constructor(
     readonly root: HTMLElement,
@@ -63,10 +65,11 @@ export class Hud {
       <div class="tr"></div>
       <div class="coach"></div>
       <div class="bl"></div>
-      <div class="bottom"><div class="cardwrap"></div><div class="belt"></div></div>
+      <div class="bottom"><div class="hatchcard"></div><div class="belt"></div></div>
+      <div class="side"><div class="cardwrap"></div></div>
       <div class="log"></div>
       <div class="chip"></div>`;
-    for (const k of ['tl', 'tr', 'coach', 'bl', 'cardwrap', 'belt', 'log', 'chip']) this.els[k] = root.querySelector('.' + k)!;
+    for (const k of ['tl', 'tr', 'coach', 'bl', 'cardwrap', 'hatchcard', 'belt', 'log', 'chip']) this.els[k] = root.querySelector('.' + k)!;
     root.addEventListener('click', (e) => {
       const t = (e.target as HTMLElement).closest('[data-act]') as HTMLElement | null;
       if (!t || (t as HTMLButtonElement).disabled) return;
@@ -77,7 +80,7 @@ export class Hud {
       else if (a === 'place') this.h.place(id);
       else if (a === 'release') this.h.release(id);
       else if (a === 'deliver') this.h.deliver(t.dataset.order!, id);
-      else if (a === 'hatch') this.h.hatch();
+      else if (a === 'hatch') (this.hatchInfo = null), this.h.hatch();
       else if (a === 'warm') this.h.temp('warm');
       else if (a === 'cold') this.h.temp('cold');
       else if (a === 'hint') this.h.hint();
@@ -85,6 +88,7 @@ export class Hud {
       else if (a === 'mute') this.h.mute();
       else if (a === 'pedigree') this.h.pedigree();
       else if (a === 'log') this.els.log.classList.toggle('open');
+      else if (a === 'closecard') this.hatchInfo = null;
     });
     // Keep HUD pointer events from reaching the 3D canvas.
     root.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -150,14 +154,16 @@ export class Hud {
     this.set('belt', slots.join(''));
     // Selected creature card.
     this.set('cardwrap', sel && sel.loc === 'belt' ? this.cardHtml(g, sel.id) : '');
+    this.set('hatchcard', this.hatchInfo && g.phase === 'play' ? this.hatchInfo.html : '');
     // Hatch log.
     this.set('log', this.logHtml(g));
     // Side chips.
     this.set('chip', `${g.day.pedigree ? `<button data-act="pedigree">📜 לוח השושלת</button>` : ''}<button data-act="log" class="logbtn">📊 יומן</button>`);
   }
 
-  private orderHtml(g: Game, o: OrderState, selId: string | null): string {
-    const ready = selId && g.canDeliver(o.def.id, selId);
+  private orderHtml(g: Game, o: OrderState, _selId: string | null): string {
+    const selId = g.deliverable(o.def.id);
+    const ready = !!selId;
     const req = o.def.req;
     let od = '';
     if (o.filled) od = 'הושלם!';
@@ -200,20 +206,77 @@ export class Hud {
         const rec = GENES[gene].alleles[1];
         const recName = phenoName(gene, GENES[gene].phenotype([rec, rec], 'warm'));
         const note = set.length > 1 && streak > 0 ? `<div class="note">${streak} גורים עם בן זוג נסוג — אף אחד לא ${recName}. אם זה נשא, הסיכוי לזה <bdi>${frac(Math.pow(0.5, streak))}</bdi>. עדיין לא הוכחה!</div>` : '';
-        return `<div>${GENES[gene].nameHe}: <b>${phenoName(gene, p[gene])}</b> <span class="al"><bdi>${al[0]} ${al[1]}</bdi></span>${badge}${note}</div>`;
+        const tiles = `<span class="tiles"><bdi>${al.map((a) => `<span class="tile ${a === '?' ? 'q' : ''}">${a}</span>`).join('')}</bdi></span>`;
+        return `<div class="row"><div><div class="gn">${GENES[gene].nameHe}:</div><b>${phenoName(gene, p[gene])}</b> ${badge}</div>${tiles}</div>${note}`;
       })
       .join('');
     const parents = c.parents ? `<div class="note">הורים: ${c.parents.map((pid) => esc(g.get(pid).name)).join(' × ')}${c.env === 'cold' ? ' · גדל בקן הקר ❄️' : ''}</div>` : '';
     const tag = c.tagHe ? `<span class="tag">${esc(c.tagHe)}</span>` : '';
     const canPlace = g.phase === 'play' && (!g.nest[0] || !g.nest[1]);
     return `<div class="card">
+      <div class="ch">${esc(c.name)}${tag}</div>
       <img src="${portraitURL(visibleTraits(g, p), 128)}" alt="">
-      <div><div class="cn">${esc(c.name)}${tag}</div><div class="rows">${rows}${parents}</div></div>
+      <div class="rows">${rows}${parents}</div>
       <div class="acts">
         <button data-act="place" data-id="${id}" ${canPlace ? '' : 'disabled'}>🪺 לקן</button>
         <button class="ghost" data-act="release" data-id="${id}">🌿 שחרור</button>
       </div>
     </div>`;
+  }
+
+  /** Build the hatch explanation card: mini Punnett per gene with the cells that match the baby lit. */
+  setHatch(g: Game, id: string) {
+    const pair = g.nestPair();
+    const L = g.lens();
+    if (!pair || !L) {
+      this.hatchInfo = null;
+      return;
+    }
+    const c = g.get(id);
+    const p = g.pheno(id);
+    const tables = L.map((l) => {
+      const A = cardAlleles(l.gene, l.SA);
+      const B = cardAlleles(l.gene, l.SB);
+      const def = GENES[l.gene];
+      const key = (x: string) => Object.keys(def.label).find((k) => def.label[k] === x)!;
+      let hits = 0;
+      let known = 0;
+      const labels: string[] = [];
+      const cells = [0, 1]
+        .map((r) => {
+          const tds = [0, 1]
+            .map((cc) => {
+              const a = A[r];
+              const b = B[cc];
+              if (a === '?' || b === '?') return `<td class="q">?</td>`;
+              known++;
+              const pr = [key(a), key(b)].sort((x, y) => def.alleles.indexOf(x) - def.alleles.indexOf(y)) as [string, string];
+              const ph = def.phenotype(pr, g.nestTemp);
+              const lab = def.label[pr[0]] + def.label[pr[1]];
+              const hit = ph === p[l.gene];
+              if (hit) (hits++, labels.push(lab));
+              return `<td class="${hit ? 'hit' : ''}">${lab}</td>`;
+            })
+            .join('');
+          return `<tr><th>${A[r]}</th>${tds}</tr>`;
+        })
+        .join('');
+      const head = `<tr><th></th><th>${B[0]}</th><th>${B[1]}</th></tr>`;
+      const line = known === 4 ? `${phenoName(l.gene, p[l.gene])} = <bdi>${[...new Set(labels)].join(' / ')}</bdi> · <bdi>${frac(hits / 4)}</bdi> מהתאים` : `${phenoName(l.gene, p[l.gene])} · יש בריבוע אללים לא ידועים (?)`;
+      return `<div class="mini"><table dir="ltr">${head}${cells}</table><div class="ml">${line}</div></div>`;
+    }).join('');
+    const open = g.orders.find((o) => !o.filled && o.def.req.kind === 'phenotype');
+    const r = open ? g.orderOdds(open) : null;
+    const match = g.orders.some((o) => g.canDeliver(o.def.id, id));
+    const tail = match
+      ? `<b>מתאים להזמנה! ⭐</b>`
+      : open && r
+        ? `לא מה שהוזמן. "${esc(open.def.titleHe)}": <bdi>${pctRange(r)}</bdi> בכל ביצה — ביצה חדשה היא הגרלה חדשה.`
+        : 'כל ביצה היא הגרלה חדשה.';
+    this.hatchInfo = {
+      id,
+      html: `<div class="hcard"><button class="x" data-act="closecard" aria-label="סגירה">✕</button><div class="ht">בקע ${esc(c.name)}!</div><div class="minis">${tables}</div><div class="htail">${tail}</div>${g.eggs > 0 && !match ? `<button class="again" data-act="hatch">🥚 ביצה נוספת</button>` : ''}</div>`,
+    };
   }
 
   private logHtml(g: Game): string {

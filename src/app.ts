@@ -189,8 +189,8 @@ export class App {
       const ctl = this.ensureView(c.id);
       const n = wild.length;
       // Spread across the view, left of the nest, nearest first.
-      const span = n <= 2 ? 2.0 : 3.4;
-      const x = -1.2 - (n > 2 ? 0.5 : 0) + (n === 1 ? 1 : (k * span) / (n - 1));
+      const span = n <= 2 ? 1.9 : 3.0;
+      const x = -2.0 - (n > 2 ? 0.6 : 0) + (n === 1 ? 1 : (k * span) / (n - 1));
       const z = 4.5 + (k % 2) * 0.8 - (n > 3 ? 0.6 : 0);
       ctl.view.root.position.set(x, 0, z);
       ctl.target.set(x, 0, z);
@@ -236,6 +236,7 @@ export class App {
           break;
         }
         case 'unplaced': {
+          this.hud.hatchInfo = null;
           const c = this.ensureView(e.id);
           if (g.get(e.id).loc === 'belt') {
             c.fly = { kind: 'suck', from: c.view.root.position.clone(), to: null, t: 0, dur: 0.4 };
@@ -245,9 +246,10 @@ export class App {
           break;
         }
         case 'placed': {
+          this.hud.hatchInfo = null;
           const c = this.ensureView(e.id);
           c.view.setLook(lookOf(g.pheno(e.id)));
-          c.fly = { kind: 'shoot', from: this.nozzle(), to: NEST_SLOTS[e.slot].clone().setY(0.35), t: 0, dur: 0.55 };
+          c.fly = { kind: 'shoot', from: this.nozzle(), to: NEST_SLOTS[e.slot].clone(), t: 0, dur: 0.55 };
           this.gun.fire(NEST_SLOTS[e.slot]);
           this.sfx.shoot();
           this.actionsDone.placed = true;
@@ -284,11 +286,12 @@ export class App {
           this.litHold = 3.5;
           this.revealPheno = g.pheno(e.id);
           this.actionsDone.hatched = true;
+          this.hud.setHatch(g, e.id);
           if (e.matches.length) {
             this.confetti.burst(HATCH_SPOT.clone().setY(1), 90);
             setTimeout(() => this.sfx.cheer(), 150);
-            this.hud.toast(`${g.get(e.id).name} מתאים להזמנה! בחרו אותו ולחצו "מסרו" ⭐`);
-          } else {
+            this.hud.toast(`${g.get(e.id).name} מתאים להזמנה! לחצו "מסרו" בהזמנה ⭐`);
+          } else if (!g.day.lens) {
             const p = g.pheno(e.id);
             this.hud.toast(`בקע ${g.get(e.id).name}: ${g.day.genes.map((gene) => phenoName(gene, p[gene])).join(' · ')}`);
           }
@@ -296,6 +299,7 @@ export class App {
           break;
         }
         case 'delivered': {
+          this.hud.hatchInfo = null;
           const c = this.ensureView(e.id);
           c.fly = { kind: 'deliver', from: this.nozzle(), to: VILLAGER_POS.clone().add(new THREE.Vector3(0.6, 0, 0.6)), t: 0, dur: 0.6 };
           this.gun.fire(VILLAGER_POS);
@@ -367,7 +371,8 @@ export class App {
     this.fps.frames++;
     this.fps.t += dt;
     if (this.fps.t > 1) (this.fps.value = this.fps.frames / this.fps.t), (this.fps.frames = 0), (this.fps.t = 0);
-    this.render();
+    // Under test control (advanceTime) each call renders once; the loop stays idle.
+    if (!this.manual) this.render();
     requestAnimationFrame(this.frame);
   };
 
@@ -485,7 +490,7 @@ export class App {
         }
       } else if (c.loc === 'nest') {
         const slot = g.nest[0] === id ? 0 : 1;
-        v.root.position.lerp(NEST_SLOTS[slot].clone().setY(0.3), Math.min(1, dt * 8));
+        v.root.position.lerp(NEST_SLOTS[slot], Math.min(1, dt * 8));
         v.root.scale.setScalar(1);
         const other = NEST_SLOTS[1 - slot];
         const look = new THREE.Vector3((other.x + this.camera.position.x) / 2, 0.3, (other.z + this.camera.position.z) / 2);
@@ -661,15 +666,14 @@ export class App {
     let text = '';
     let target: THREE.Vector3 | null = null;
     const nestCount = g.nest.filter(Boolean).length;
-    const selMatch = g.selected && g.orders.some((o) => g.canDeliver(o.def.id, g.selected!));
-    const anyMatch = g.belt.find((id) => g.orders.some((o) => g.canDeliver(o.def.id, id)));
+    const anyMatch = g.orders.map((o) => g.deliverable(o.def.id)).find((x) => !!x) ?? null;
+    const selMatch = !!anyMatch;
     if (g.phase === 'hatching') text = 'הביצה בוקעת...';
     else if (g.phase !== 'play') text = '';
     else if (selMatch) {
-      text = '📦 לחצו "מסרו" בהזמנה (למעלה) כדי למסור לכפר';
+      text = `📦 ${g.get(anyMatch!).name} מתאים! לחצו "מסרו" בהזמנה למעלה`;
       target = VILLAGER_POS.clone().setY(2.3);
-    } else if (anyMatch) text = `⭐ ${g.get(anyMatch).name} מתאים להזמנה — בחרו אותו בכיס`;
-    else if (nestCount + g.belt.length < 2 && g.list('meadow').length) {
+    } else if (nestCount + g.belt.length < 2 && g.list('meadow').length) {
       const near = g.list('meadow')[0];
       text = '👆 לחצו על גנומי כדי לשאוב אותו לרשת';
       const c = this.views.get(near.id);
@@ -804,9 +808,8 @@ export class App {
         if (!g.place(id) && g.nest[0] && g.nest[1]) this.hud.toast('הקן מלא. לחצו על גנומי בקן כדי להחזיר אותו לרשת.');
       } else if (!g.nestPair()) this.hud.toast('קודם שאבו גנומי מהאחו 👆');
     } else if (hit.kind === 'board') {
-      const id = g.selected;
-      const o = id && g.orders.find((x) => g.canDeliver(x.def.id, id));
-      if (o && id) g.deliver(o.def.id, id);
+      const o = g.orders.find((x) => g.deliverable(x.def.id));
+      if (o) g.deliver(o.def.id, g.deliverable(o.def.id)!);
       else this.hud.toast('בחרו בכיס גנומי שמתאים להזמנה, ואז "מסרו".');
     } else if (hit.kind === 'pedigree') this.showPedigree();
     else if (hit.kind === 'ground') this.player.goTo(hit.point);

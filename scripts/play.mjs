@@ -16,10 +16,10 @@ const errors = [];
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 page.on('pageerror', (e) => errors.push(String(e)));
 await page.goto(`${base}?day=${day}&skipintro=1&seed=5`);
-await page.waitForFunction(() => window.__app && window.render_game_to_text, null, { timeout: 120000 }).catch(async (e) => { console.log('boot timeout', errors, await page.content().then((c) => c.slice(0, 400))); throw e; });
+await page.waitForFunction(() => window.__app && window.render_game_to_text, null, { timeout: 180000 }).catch(async (e) => { console.log('boot timeout', errors, await page.content().then((c) => c.slice(0, 400))); throw e; });
 const adv = (ms) => page.evaluate((m) => window.advanceTime(m), ms);
 const state = async () => JSON.parse(await page.evaluate(() => window.render_game_to_text()));
-const shot = async (name) => page.screenshot({ path: `${out}/${name}.png` });
+const shot = async (name) => page.screenshot({ path: `${out}/${name}.png`, timeout: 180000 });
 const clickCreature = async (id) => {
   const p = await page.evaluate((i) => window.__app.screenOf(i), id);
   if (!p) return false;
@@ -29,11 +29,14 @@ const clickCreature = async (id) => {
 const clickSel = async (sel) => {
   const el = await page.$(sel);
   if (!el) return false;
-  await el.click();
+  const b = await el.boundingBox();
+  if (!b) return false;
+  await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
   return true;
 };
 
 await adv(400);
+await page.evaluate(() => window.advanceTime(16));
 await shot('01-start');
 let s = await state();
 // Catch the wild ones.
@@ -77,7 +80,7 @@ while (s.phase === 'play' && s.eggs > 0 && hatches < 12) {
   const ready = await page.$('.deliver');
   if (ready) {
     await shot('08-ready-to-deliver');
-    await ready.click();
+    await clickSel('.deliver');
     await adv(2500);
     await shot('09-delivered');
     s = await state();

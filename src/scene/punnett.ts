@@ -29,6 +29,8 @@ const ROW_COIN_X = 170;
 const COL_COIN_Y = 185;
 const PLANE_W = 2.1;
 const PLANE_H = (PLANE_W * H) / W;
+/** Height of the lens centre above the nest. */
+const LIFT = 2.2;
 
 const PHENO_BG: Record<string, string> = {
   upright: '#fff1d6',
@@ -197,7 +199,7 @@ export class PunnettLens {
   private visibleWanted = false;
 
   constructor(private anchor: THREE.Vector3) {
-    this.group.position.copy(anchor).add(new THREE.Vector3(0, 2.75, 0));
+    this.group.position.copy(anchor).add(new THREE.Vector3(0, LIFT, 0));
     this.beam = new THREE.Mesh(
       new THREE.CylinderGeometry(0.5, 1.2, 2.2, 24, 1, true),
       new THREE.MeshBasicMaterial({ color: '#fff0a8', transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
@@ -252,9 +254,9 @@ export class PunnettLens {
     this.shown += ((this.visibleWanted ? 1 : 0) - this.shown) * Math.min(1, dt * 7);
     this.group.visible = this.shown > 0.02;
     this.beam.visible = this.group.visible;
-    const k = this.shown;
-    this.group.scale.set(k, 0.2 + 0.8 * k, k);
-    this.group.position.y = this.anchor.y + 2.75 + (reduced ? 0 : Math.sin(this.t * 1.4) * 0.05);
+    const k = this.shown * 0.85;
+    this.group.scale.set(k, 0.17 + 0.68 * this.shown, k);
+    this.group.position.y = this.anchor.y + LIFT + (reduced ? 0 : Math.sin(this.t * 1.4) * 0.05);
     // Face the camera around Y only.
     const dx = camera.position.x - this.group.position.x;
     const dz = camera.position.z - this.group.position.z;

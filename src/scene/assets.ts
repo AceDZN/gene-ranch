@@ -38,10 +38,14 @@ export async function loadModels(onProgress?: (done: number, total: number) => v
 }
 
 /** A normalized copy of a static model: base on y = 0, centred in XZ, scaled to `height` (or `width`). */
-export function propInstance(key: string, size: { height?: number; width?: number }): THREE.Object3D | null {
+export function propInstance(key: string, size: { height?: number; width?: number; rotX?: number }): THREE.Object3D | null {
   const g = models.get(key);
   if (!g) return null;
-  const obj = g.scene.clone(true);
+  const inner = g.scene.clone(true);
+  const obj = new THREE.Group();
+  obj.add(inner);
+  // Optional tilt correction (e.g. the Tripo nest's opening leans forward).
+  if (size.rotX) inner.rotation.x = size.rotX;
   const box = new THREE.Box3().setFromObject(obj);
   const s = box.getSize(new THREE.Vector3());
   const k = size.height ? size.height / s.y : (size.width ?? 1) / Math.max(s.x, s.z);

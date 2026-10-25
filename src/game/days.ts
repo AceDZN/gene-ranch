@@ -92,9 +92,9 @@ export const DAYS: DayDef[] = [
     id: 'd2-hidden-carrier',
     num: 2,
     titleHe: 'הנשא הנסתר',
-    introHe: 'אחד משלושת הגנומים הזקופים הוא נשא סודי (Ee). מצאו אותו ומסרו אותו לכפר. פיפ השמוט (ee) מאתמול כבר אצלכם.',
+    introHe: 'אחד משלושת הגנומים הזקופים הוא נשא סודי (Ee). הכפר מקבל רק נשא מוכח — עם גור שמוט כהוכחה. פיפ השמוט (ee) מאתמול כבר אצלכם.',
     genes: ['ears'],
-    eggs: 8,
+    eggs: 10,
     hints: true,
     lens: true,
     autoDeduce: true,
@@ -109,7 +109,7 @@ export const DAYS: DayDef[] = [
         { key: 'shimshi', name: 'שמשי', geno: g[2], loc: 'meadow' },
       ];
     },
-    orders: [{ id: 'carrier', titleHe: 'הנשא הסודי (Ee)', req: { kind: 'carrier', gene: 'ears' }, icon: { ears: 'upright' } }],
+    orders: [{ id: 'carrier', titleHe: 'נשא מוכח (Ee)', req: { kind: 'carrier', gene: 'ears' }, icon: { ears: 'upright' } }],
     hintsHe: [
       'הכלאת מבחן: הכליאו מועמד זקוף עם פיפ השמוט (ee).',
       'גור שמוט אחד מספיק כדי להוכיח שההורה הזקוף נשא. גורים זקופים בלבד — עוד לא הוכחה.',

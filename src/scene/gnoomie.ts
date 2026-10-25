@@ -39,8 +39,9 @@ vec3 hash3(vec3 p){ p=vec3(dot(p,vec3(127.1,311.7,74.7)),dot(p,vec3(269.5,183.3,
   float mx = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b));
   float mn = min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b));
   float sat = (mx - mn) / max(mx, 1e-3);
-  float fur = smoothstep(0.42, 0.62, lum) * (1.0 - smoothstep(0.14, 0.32, sat));
-  diffuseColor.rgb = mix(diffuseColor.rgb, uTint * (0.55 + 0.6 * lum), fur * uTintMix);
+  // Tint the light cream fur; dark eyes/mouth stay as they are.
+  float fur = smoothstep(0.22, 0.45, lum) * (1.0 - smoothstep(0.35, 0.6, sat));
+  diffuseColor.rgb = mix(diffuseColor.rgb, uTint * (0.35 + 0.85 * lum), fur * uTintMix);
   float face = smoothstep(0.3, 0.7, q.z) * smoothstep(-0.55, -0.25, q.y) * (1.0 - smoothstep(0.35, 0.6, q.y));
   float m = (1.0 - face) * mix(1.0, fur, uTintMix);
   if (uStripes > 0.5) {
@@ -92,8 +93,8 @@ function leafLathe(len: number, w: number): THREE.BufferGeometry {
   return g;
 }
 
-const earGeo = leafLathe(0.36, 0.105);
-const earInnerGeo = leafLathe(0.27, 0.06);
+const earGeo = leafLathe(0.46, 0.11);
+const earInnerGeo = leafLathe(0.35, 0.062);
 const eyeWhite = new THREE.SphereGeometry(0.085, 20, 16);
 const pupil = new THREE.SphereGeometry(0.062, 20, 16);
 const glint = new THREE.SphereGeometry(0.02, 8, 6);
@@ -300,6 +301,9 @@ export class GnoomieView {
         const clip = name ? t.clips.find((c) => c.name === name) : undefined;
         if (clip) this.actions.set(role, this.mixer.clipAction(clip));
       }
+      this.play('idle');
+      // Desynchronise idles so a crowd doesn't move in lockstep.
+      this.mixer.update(Math.random() * 10);
     }
   }
 

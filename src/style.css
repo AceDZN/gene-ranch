@@ -787,3 +787,271 @@ button {
     font-size: 16px;
   }
 }
+
+/* ---- Mockup styling pass (docs/visual-targets) ---- */
+.order {
+  margin-top: 14px;
+  padding-top: 18px;
+  border-color: #f0d7a4;
+  background: linear-gradient(#fffaf0, #fff1dc);
+}
+.order::before {
+  content: 'הזמנה';
+  position: absolute;
+  top: -13px;
+  right: 50%;
+  transform: translateX(50%);
+  background: var(--teal);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 2px 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+.order.filled::before {
+  background: #2f9e44;
+}
+.eggbtn {
+  background: radial-gradient(circle at 45% 35%, #fff4e6 0%, #ffc6d9 55%, #f59ac0 100%);
+  border: 5px solid var(--teal2);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.7), 0 0 22px rgba(72, 201, 191, 0.7), var(--shadow);
+}
+.eggbtn span {
+  background: #fff8e6;
+  border-radius: 10px;
+  padding: 1px 8px;
+  color: var(--ink);
+}
+.slot:not(.full)::after {
+  content: '+';
+  font-size: 30px;
+  color: #c9b590;
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+.slot:not(.full) {
+  border-style: solid;
+  border-color: #efe2c8;
+  background: #f8f0e2;
+}
+.slot.full {
+  background: radial-gradient(circle, #ffffff 55%, #c9f3ef 100%);
+  border-color: var(--teal2);
+}
+.belt {
+  background: rgba(255, 248, 236, 0.92);
+  padding: 8px 14px;
+}
+.plaque {
+  border-width: 3px;
+  border-color: #f0d7a4;
+  border-radius: 22px;
+}
+.rbtn {
+  border: 3px solid #e9fffc;
+}
+.log {
+  background: linear-gradient(#fffaf0, #fff1dc);
+  border-color: #f0d7a4;
+}
+.side {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 250px;
+}
+.side .card {
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+  max-width: none;
+  padding: 0 0 10px;
+  border: 4px solid #f5c35c;
+  box-shadow: 0 0 18px rgba(255, 200, 80, 0.45), var(--shadow);
+  overflow: hidden;
+  gap: 4px;
+}
+.card .ch {
+  background: var(--teal);
+  color: #fff;
+  font-weight: 700;
+  font-size: 19px;
+  text-align: center;
+  padding: 6px;
+}
+.side .card img {
+  width: 96px;
+  height: 96px;
+  align-self: center;
+}
+.card .rows {
+  padding: 0 10px;
+}
+.card .row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  border-radius: 12px;
+  padding: 4px 8px;
+  margin: 4px 0;
+}
+.card .gn {
+  font-size: 12px;
+  opacity: 0.75;
+}
+.tile {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 34px;
+  border-radius: 9px;
+  background: #fff3d6;
+  border: 2px solid #f0d08c;
+  font-weight: 700;
+  font-size: 20px;
+  margin: 0 2px;
+}
+.tile.q {
+  background: #fff4b0;
+  border-color: #ffb800;
+  color: #e07a00;
+}
+.side .card .acts {
+  flex-direction: row;
+  justify-content: center;
+  margin: 4px 0 0;
+}
+.hcard {
+  position: relative;
+  background: linear-gradient(#fffaf0, #fff1dc);
+  border: 3px solid #f0d7a4;
+  border-radius: 22px;
+  padding: 10px 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+  justify-content: center;
+  max-width: 620px;
+  animation: pop 0.3s ease-out;
+}
+.hcard .ht {
+  font-weight: 700;
+  font-size: 18px;
+  width: 100%;
+  text-align: center;
+}
+.hcard .minis {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.hcard .mini {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.hcard table {
+  border-collapse: collapse;
+  font-weight: 700;
+  font-size: 16px;
+}
+.hcard th {
+  padding: 0 6px;
+  color: var(--plum);
+}
+.hcard td {
+  border: 2px solid #c9a46a;
+  padding: 3px 7px;
+  background: #fff;
+  text-align: center;
+}
+.hcard td.hit {
+  background: #ffe27a;
+  box-shadow: inset 0 0 0 2px #ffb800;
+}
+.hcard td.q {
+  background: #eee7f4;
+  color: #9b8aad;
+}
+.hcard .ml {
+  font-size: 14px;
+  max-width: 190px;
+}
+.hcard .htail {
+  font-size: 14px;
+  width: 100%;
+  text-align: center;
+}
+.hcard .again {
+  background: var(--teal);
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 7px 18px;
+  border-radius: 14px;
+}
+.hcard .x {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  background: transparent;
+  font-size: 16px;
+  opacity: 0.6;
+}
+@media (max-width: 760px) {
+  .side {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    bottom: 76px;
+  }
+  .side .card {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 0 0 6px;
+  }
+  .card .ch {
+    width: 100%;
+    font-size: 15px;
+    padding: 3px;
+  }
+  .side .card img {
+    width: 54px;
+    height: 54px;
+  }
+  .card .rows {
+    flex: 1;
+  }
+  .tile {
+    width: 26px;
+    height: 28px;
+    font-size: 16px;
+  }
+  .hcard {
+    max-width: 96vw;
+    padding: 6px 8px;
+  }
+  .hcard .ml {
+    font-size: 12px;
+  }
+  .coach {
+    bottom: 236px;
+  }
+}
+.chip {
+  right: auto;
+  left: 14px;
+  bottom: 150px;
+}
+@media (max-width: 760px) {
+  .chip {
+    bottom: auto;
+    top: 160px;
+  }
+}

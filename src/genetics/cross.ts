@@ -5,7 +5,11 @@ import { GENES, GENE_IDS, canon, pairKey, phenotypeOf, type Env, type GeneId, ty
 export class Rng {
   private s: number;
   constructor(seed: number) {
-    this.s = seed >>> 0;
+    // Scramble the seed (murmur3 finalizer) so nearby seeds don't give correlated first draws.
+    let h = (seed >>> 0) ^ 0x9e3779b9;
+    h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+    this.s = (h ^ (h >>> 16)) >>> 0;
   }
   next(): number {
     this.s = (this.s + 0x6d2b79f5) >>> 0;

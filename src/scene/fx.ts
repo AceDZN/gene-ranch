@@ -202,10 +202,10 @@ export class NetGun {
   private bobT = 0;
   readonly canister: THREE.Mesh;
   constructor() {
-    const model = propInstance('netgun', { width: 0.55 });
+    const model = propInstance('netgun', { width: 0.5 });
     if (model) {
-      // The Tripo net gun's funnel points to -X; turn it to face forward (-Z).
-      model.rotation.y = -Math.PI / 2;
+      // The Tripo net gun's funnel points along X; turn it to face forward (-Z).
+      model.rotation.y = Math.PI / 2;
       model.position.y = -0.1;
       this.group.add(model);
       this.nozzle.position.set(0, 0.05, -0.32);
@@ -240,8 +240,8 @@ export class NetGun {
     this.beam.geometry.rotateX(-Math.PI / 2);
     this.beam.renderOrder = 10;
     this.group.position.set(0.36, -0.34, -0.62);
-    this.group.rotation.set(0.05, -0.12, 0);
-    this.group.scale.setScalar(0.62);
+    this.group.rotation.set(0.12, 0.22, 0);
+    this.group.scale.setScalar(0.5);
     this.group.traverse((o) => {
       o.renderOrder = 20;
       const m = (o as THREE.Mesh).material as THREE.Material | undefined;
@@ -267,7 +267,7 @@ export class NetGun {
     this.bobT += dt * (moving ? 9 : 2);
     const bob = reduced ? 0 : Math.sin(this.bobT) * (moving ? 0.012 : 0.004);
     this.group.position.set(0.3, -0.27 + bob, -0.62 + this.kick * 0.06);
-    this.group.rotation.x = 0.05 + this.kick * 0.25;
+    this.group.rotation.x = 0.12 + this.kick * 0.25;
     this.beamT = Math.max(0, this.beamT - dt);
     (this.beam.material as THREE.MeshBasicMaterial).opacity = this.beamT > 0 ? 0.35 * (this.beamT / 0.45) : 0;
     this.beam.visible = this.beamT > 0;
