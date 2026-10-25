@@ -14,6 +14,10 @@
 - Day 2 now needs a proven carrier from the wild candidates (budget 10); Day 3 third star needs test-cross evidence; RNG seeds scrambled (nearby seeds gave identical rosters).
 - All six days have been won through real clicks (desktop) and Day 1 at 390×844; 45 unit tests pass.
 
-## Next
-- Fresh-eyes playtest report → fix confusions.
-- Final capture set, docs/VISUAL_REVIEW.md, PLAYTEST.md.
+- Fresh-eyes playtest (on a pre-science-fix snapshot) → confusions fixed (see PLAYTEST.md); re-check requested.
+- Final build: all six days won through real clicks at 1280×800 and Day 1 at 390×844 in one run, no console errors; 45 unit tests pass. VISUAL_REVIEW.md, PLAYTEST.md, screenshots committed.
+
+## Open / next
+- Port 5201/4201 still held by goblin-kitchen (not ours) at the end of the session; dev server left running on 5221.
+- Real-GPU FPS and real-phone testing not done.
+- Ideas: fur shader, nest interior, island unlock map, carrying a ranch between days.

@@ -35,14 +35,15 @@ Targets: ChatGPT gpt-image mockups in [visual-targets/](visual-targets/) (prompt
 ## Other captures
 
 - [06-day4-codominance.jpg](screenshots/06-day4-codominance.jpg): FˢFˢ × FᴰFᴰ — every cell FˢFᴰ, babies show stripes AND spots (not a blend).
-- [09-day6-pedigree.jpg](screenshots/09-day6-pedigree.jpg): show island (night palette, crystals, bunting), pedigree board in the world and as an overlay. (This capture predates the two-line label fix.)
+- [09-day6-pedigree.jpg](screenshots/09-day6-pedigree.jpg): show island (night palette, crystals, bunting), pedigree board in the world (two-line labels) and as an overlay caught mid fade-in.
+- [13-day2-proven-carrier.jpg](screenshots/13-day2-proven-carrier.jpg), [14-day3-pure-line.jpg](screenshots/14-day3-pure-line.jpg): Day 2 proven carrier ready to deliver; Day 3 pure-line delivery.
 - [05-day1-win.jpg](screenshots/05-day1-win.jpg), [10-day6-win.jpg](screenshots/10-day6-win.jpg): win cards with stars and the science takeaway.
 - [11-phone-hatch.jpg](screenshots/11-phone-hatch.jpg), [12-phone-start.jpg](screenshots/12-phone-start.jpg): 390×844.
 
 ## Remaining deviations (honest list)
 
 1. No fur: creatures are smooth Tripo bodies, not the fluffy look of the mockups.
-2. The Tripo nest is a flattened straw ring on a procedural stone; up close the weave is coarse.
+2. The Tripo nest is a flattened straw ring on a procedural stone; up close the weave is coarse and a dark band inside the ring is still visible from some angles.
 3. The Punnett square is smaller on screen than in mockup 2, and on phones its top can sit under the order card.
 4. Babies that hop out of a full belt can wander close to the camera and cover part of the view.
 5. Set dressing is sparser and lower-poly than the painted mockups; lighting is simpler (no bloom, software GL in captures).
