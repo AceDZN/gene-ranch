@@ -9,6 +9,11 @@
 - Port 5201 is held by another project's Vite server (goblin-kitchen, not ours). Dev server temporarily on 5221 (`.claude/launch.json` → `gene-ranch-alt`); reported to the lead session.
 - Honesty fix: after a hatch the lens lights every cell matching the baby's phenotype instead of the single "true" cell, so an upright baby's EE/Ee stays hidden.
 
+- 26 Oct, ~01:00–03:00: headless Playwright playthroughs (`scripts/play.mjs`, `scripts/playall.mjs`, real mouse clicks + advanceTime) against the static build on :4221. They found and I fixed: belt-overflow trap (the wanted baby hopped into the meadow), bonus eggs granted while a winning baby existed, wall-clock UI timers, nest hit-volume swallowing taps on parents, released babies crowding the camera, three-order layouts hiding the deliver button, pink looking violet under show-island light, reversed "½ × ½ = ¼", phone layout.
+- Independent science review (report in the shared notes folder): model sound; must-fixes applied (Day 2 baby loophole, Day 3 carrier-naming shortcut, test-cross probability wording, honest out-of-eggs text, Day 4 takeaway, known carriers offered for pure lines, גנום naming clash → creatures renamed פופים, ביצות→ביצים) plus most should-fixes (Day 6 bred-only, pure tags, sex on cards, etc.).
+- Day 2 now needs a proven carrier from the wild candidates (budget 10); Day 3 third star needs test-cross evidence; RNG seeds scrambled (nearby seeds gave identical rosters).
+- All six days have been won through real clicks (desktop) and Day 1 at 390×844; 45 unit tests pass.
+
 ## Next
-- Headless playthroughs of each day with real clicks; screenshots vs mockups; VISUAL_REVIEW.md.
-- Science review + fresh-eyes playtest; fix confusions.
+- Fresh-eyes playtest report → fix confusions.
+- Final capture set, docs/VISUAL_REVIEW.md, PLAYTEST.md.

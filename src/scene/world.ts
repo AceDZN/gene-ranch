@@ -522,6 +522,11 @@ export class World {
       // Keep it a low, wide nest so the parents sitting in it stay visible, on a mossy stone.
       model.scale.y *= 0.55;
       model.position.y = 0.22;
+      // The far inner wall shows its back faces once flattened: render both sides.
+      model.traverse((o) => {
+        const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+        if (m) m.side = THREE.DoubleSide;
+      });
       const stone = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.45, 0.34, 28), new THREE.MeshStandardMaterial({ color: '#a9a2b8', roughness: 0.95 }));
       stone.position.y = 0.17;
       const moss = new THREE.Mesh(new THREE.CylinderGeometry(1.27, 1.27, 0.06, 28), new THREE.MeshStandardMaterial({ color: '#86c96f', roughness: 1 }));

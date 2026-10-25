@@ -120,7 +120,7 @@ export class Hud {
        ${g.day.hints ? `<button class="rbtn" data-act="hint" aria-label="רמז">💡</button>` : ''}
        <button class="rbtn" data-act="log" aria-label="יומן בקיעות">📊</button>
        ${g.day.pedigree ? `<button class="rbtn ped" data-act="pedigree" aria-label="לוח השושלת">📜</button>` : ''}
-       <div class="eggs ${g.eggs <= 2 ? 'low' : ''}" title="ביצים שנשארו">🥚 <bdi>× ${g.eggs}</bdi></div>`,
+       <div class="eggs ${g.eggs <= 2 ? 'low' : ''}" title="ביצים שנשארו">🥚 <bdi dir="ltr">× ${g.eggs}</bdi></div>`,
     );
     // Top-right: plaque + orders.
     const stars = g.phase === 'won' ? g.stars() : 0;
@@ -156,7 +156,9 @@ export class Hud {
     }
     this.set('belt', slots.join(''));
     // Selected creature card.
-    this.set('cardwrap', sel && sel.loc === 'belt' ? this.cardHtml(g, sel.id) : '');
+    // On phones the hatch explanation takes the card's place while it's up.
+    const narrow = window.innerWidth <= 760;
+    this.set('cardwrap', sel && sel.loc === 'belt' && !(narrow && this.hatchInfo && g.phase === 'play') ? this.cardHtml(g, sel.id) : '');
     this.set('hatchcard', this.hatchInfo && g.phase === 'play' ? this.hatchInfo.html : '');
     // Hatch log.
     this.set('log', this.logHtml(g));
@@ -170,7 +172,7 @@ export class Hud {
     const req = o.def.req;
     let od = '';
     if (o.filled) od = 'הושלם!';
-    else if (req.kind === 'purePair') od = `נמסרו <bdi>${o.delivered.length}/2</bdi>`;
+    else if (req.kind === 'purePair') od = `נמסרו <bdi dir="ltr">${o.delivered.length}/2</bdi>`;
     else if (req.kind === 'family') {
       od = req.phenos.map((ph) => (o.delivered.some((d) => g.pheno(d)[req.gene] === ph) ? '✅' : '⬜') + ' ' + phenoName(req.gene, ph)).join(' · ');
     } else {
@@ -184,8 +186,8 @@ export class Hud {
             const x = L.find((l) => l.gene === gene)?.odds.get(want);
             return x ? frac(x[0]) : '?';
           });
-          od = `סיכוי לביצה: <bdi>${parts.join(' × ')} = ${frac(r[0])}</bdi>`;
-        } else od = `סיכוי לביצה: <bdi>${pctRange(r)}</bdi>`;
+          od = `סיכוי לביצה: <bdi dir="ltr">${parts.join(' × ')} = ${frac(r[0])}</bdi>`;
+        } else od = `סיכוי לביצה: <bdi dir="ltr">${pctRange(r)}</bdi>`;
       }
     }
     const icon = portraitURL(o.def.icon, 96);
@@ -208,8 +210,8 @@ export class Hud {
         const streak = g.streak(id, gene);
         const rec = GENES[gene].alleles[1];
         const recName = phenoName(gene, GENES[gene].phenotype([rec, rec], 'warm'));
-        const note = set.length > 1 && streak > 0 ? `<div class="note">${streak} גורים עם בן זוג רצסיבי — אף אחד מהם לא יצא ${recName}. אם זה נשא, הסיכוי לזה <bdi>${frac(Math.pow(0.5, streak))}</bdi>. עדיין לא הוכחה!</div>` : '';
-        const tiles = `<span class="tiles"><bdi>${al.map((a) => `<span class="tile ${a === '?' ? 'q' : ''}">${a}</span>`).join('')}</bdi></span>`;
+        const note = set.length > 1 && streak > 0 ? `<div class="note streak">${streak} גורים עם בן זוג רצסיבי — אף אחד מהם לא יצא ${recName}. אם זה נשא, הסיכוי לזה <bdi dir="ltr">${frac(Math.pow(0.5, streak))}</bdi>. עדיין לא הוכחה!</div>` : '';
+        const tiles = `<span class="tiles"><bdi dir="ltr">${al.map((a) => `<span class="tile ${a === '?' ? 'q' : ''}">${a}</span>`).join('')}</bdi></span>`;
         return `<div class="row"><div><div class="gn">${GENES[gene].nameHe}:</div><b>${phenoName(gene, p[gene])}</b> ${badge}</div>${tiles}</div>${note}`;
       })
       .join('');
@@ -266,7 +268,7 @@ export class Hud {
         })
         .join('');
       const head = `<tr><th></th><th>${B[0]}</th><th>${B[1]}</th></tr>`;
-      const line = known === 4 ? `${phenoName(l.gene, p[l.gene])} = <bdi>${[...new Set(labels)].join(' / ')}</bdi> · <bdi>${frac(hits / 4)}</bdi> מהתאים` : `${phenoName(l.gene, p[l.gene])} · יש בריבוע אללים לא ידועים (?)`;
+      const line = known === 4 ? `${phenoName(l.gene, p[l.gene])} = <bdi dir="ltr">${[...new Set(labels)].join(' / ')}</bdi> · <bdi dir="ltr">${frac(hits / 4)}</bdi> מהתאים` : `${phenoName(l.gene, p[l.gene])} · יש בריבוע אללים לא ידועים (?)`;
       return `<div class="mini"><table dir="ltr">${head}${cells}</table><div class="ml">${line}</div></div>`;
     }).join('');
     const open = g.orders.find((o) => !o.filled && o.def.req.kind === 'phenotype');
@@ -275,7 +277,7 @@ export class Hud {
     const tail = match
       ? `<b>מתאים להזמנה! ⭐</b>`
       : open && r
-        ? `לא מה שהוזמן. "${esc(open.def.titleHe)}": <bdi>${pctRange(r)}</bdi> בכל ביצה — ביצה חדשה היא הגרלה חדשה.`
+        ? `לא מה שהוזמן. "${esc(open.def.titleHe)}": <bdi dir="ltr">${pctRange(r)}</bdi> בכל ביצה — ביצה חדשה היא הגרלה חדשה.`
         : 'כל ביצה היא הגרלה חדשה.';
     this.hatchInfo = {
       id,
@@ -298,8 +300,8 @@ export class Hud {
           const n = entries.filter((e) => e.pheno[gene] === ph).length;
           const obs = entries.length ? n / entries.length : 0;
           const ex = odds?.get(ph);
-          const exTxt = ex ? `<bdi>${pctRange(ex)}</bdi>` : '?';
-          rows += `<div class="lr"><img src="${portraitURL({ [gene]: ph }, 52)}" alt=""><div><div class="bar"><i style="width:${obs * 100}%"></i>${ex && ex[0] === ex[1] ? `<b style="left:${ex[0] * 100}%"></b>` : ''}</div><div class="note">${phenoName(gene, ph)}</div></div><div><bdi>${n}/${entries.length}</bdi><div class="note">צפוי ${exTxt}</div></div></div>`;
+          const exTxt = ex ? `<bdi dir="ltr">${pctRange(ex)}</bdi>` : '?';
+          rows += `<div class="lr"><img src="${portraitURL({ [gene]: ph }, 52)}" alt=""><div><div class="bar"><i style="width:${obs * 100}%"></i>${ex && ex[0] === ex[1] ? `<b style="left:${ex[0] * 100}%"></b>` : ''}</div><div class="note">${phenoName(gene, ph)}</div></div><div><bdi dir="ltr">${n}/${entries.length}</bdi><div class="note">צפוי ${exTxt}</div></div></div>`;
         }
       }
     }

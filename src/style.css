@@ -1092,3 +1092,49 @@ button {
     width: 230px;
   }
 }
+.tiles bdi {
+  display: inline-flex;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .side .card {
+    flex-wrap: nowrap;
+    align-items: center;
+    padding: 4px 6px;
+    gap: 6px;
+  }
+  .side .card .ch {
+    width: auto;
+    background: none;
+    color: var(--ink);
+    font-size: 14px;
+    padding: 0;
+  }
+  .side .card img {
+    width: 40px;
+    height: 40px;
+  }
+  .side .card .rows {
+    padding: 0;
+    font-size: 11px;
+  }
+  .card .row {
+    padding: 2px 4px;
+    margin: 2px 0;
+  }
+  .card .gn {
+    display: none;
+  }
+  .side .card .acts {
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+  }
+  .side .card .acts button {
+    padding: 5px 8px;
+    font-size: 13px;
+  }
+  .side .card .note:not(.streak) {
+    display: none;
+  }
+}

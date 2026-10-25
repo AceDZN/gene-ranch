@@ -95,10 +95,9 @@ export function drawPedigree(canvas: HTMLCanvasElement, g: Game) {
     for (const gene of genes) out[gene] = p[gene];
     return out;
   };
-  const label = (id: string) =>
-    genes
-      .map((gene) => GENES[gene].phenoHe[g.pheno(id)[gene]])
-      .join(' · ');
+  /** One short line per trait so neighbouring columns never overlap. */
+  const labelLines = (id: string) => genes.map((gene) => GENES[gene].phenoHe[g.pheno(id)[gene]]);
+  const lines = (txt: string[], x: number, y: number, lh: number) => txt.forEach((t, i) => ctx.fillText(t, x, y + i * lh));
   const kids = [...g.creatures.values()].filter((c) => c.origin === 'wild');
   const colW = W / kids.length;
   kids.forEach((c, i) => {
@@ -109,18 +108,18 @@ export function drawPedigree(canvas: HTMLCanvasElement, g: Game) {
         const px = cx + (k === 0 ? 1 : -1) * colW * 0.24;
         drawPortrait(ctx, px, 190, 44, traits(pid), { showTail: true });
         ctx.fillStyle = '#d8ccff';
-        ctx.font = '500 20px Rubik, sans-serif';
-        ctx.fillText(label(pid), px, 262);
+        ctx.font = '500 17px Rubik, sans-serif';
+        lines(labelLines(pid), px, 254, 20);
       });
       ctx.strokeStyle = '#ffe9a8';
       ctx.lineWidth = 5;
       ctx.beginPath();
-      ctx.moveTo(cx + colW * 0.24, 290);
-      ctx.lineTo(cx + colW * 0.24, 320);
-      ctx.lineTo(cx - colW * 0.24, 320);
-      ctx.lineTo(cx - colW * 0.24, 290);
-      ctx.moveTo(cx, 320);
-      ctx.lineTo(cx, 380);
+      ctx.moveTo(cx + colW * 0.24, 300);
+      ctx.lineTo(cx + colW * 0.24, 330);
+      ctx.lineTo(cx - colW * 0.24, 330);
+      ctx.lineTo(cx - colW * 0.24, 300);
+      ctx.moveTo(cx, 330);
+      ctx.lineTo(cx, 385);
       ctx.stroke();
     } else {
       ctx.fillStyle = '#a99ad6';
@@ -132,10 +131,10 @@ export function drawPedigree(canvas: HTMLCanvasElement, g: Game) {
     ctx.font = '700 36px Rubik, sans-serif';
     ctx.fillText(c.name, cx, 580);
     ctx.fillStyle = '#d8ccff';
-    ctx.font = '500 22px Rubik, sans-serif';
-    ctx.fillText(label(c.id), cx, 618);
+    ctx.font = '500 21px Rubik, sans-serif';
+    lines(labelLines(c.id), cx, 616, 25);
   });
   ctx.fillStyle = '#ffe9a8';
-  ctx.font = '500 26px Rubik, sans-serif';
-  ctx.fillText(ped.noteHe, W / 2, H - 50);
+  ctx.font = '500 24px Rubik, sans-serif';
+  wrap(ctx, ped.noteHe, W / 2, H - 80, W - 80, 32);
 }

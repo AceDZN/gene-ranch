@@ -180,7 +180,9 @@ export class App {
     this.views.clear();
     this.world.setPalette(this.game.day.island);
     this.world.frost.visible = false;
-    this.player.place(SPAWN, SPAWN_LOOK);
+    // Portrait phones see a narrow slice: aim between the wild Poofies and the nest.
+    const portrait = this.camera.aspect < 0.8;
+    this.player.place(SPAWN, portrait ? SPAWN_LOOK.clone().add(new THREE.Vector3(0.5, 0.5, 0)) : SPAWN_LOOK);
     this.egg.group.visible = false;
     this.revealPheno = null;
     this.boardKey = '';
@@ -911,7 +913,7 @@ export class App {
     this.showModal(
       'intro',
       `<h2>יום ${g.day.num} · ${g.day.titleHe}</h2><p>${g.day.introHe}</p><div class="wants">${wants}</div>
-       <p style="font-size:15px">🥚 × <bdi>${g.eggs}</bdi> ביצים${g.day.hints ? '' : ' · בלי רמזים, בלי עדשת פאנט'}</p>${how}<button class="big" data-o="go">יאללה!</button>`,
+       <p style="font-size:15px">🥚 × <bdi dir="ltr">${g.eggs}</bdi> ביצים${g.day.hints ? '' : ' · בלי רמזים, בלי עדשת פאנט'}</p>${how}<button class="big" data-o="go">יאללה!</button>`,
       { go: () => this.closeOverlay() },
     );
   }
@@ -948,7 +950,7 @@ export class App {
     this.showModal(
       'win',
       `<div class="bigstars">${'★'.repeat(s)}<span class="off">${'★'.repeat(3 - s)}</span></div><h2>${last ? 'ניצחתם בתערוכה! 🏆' : `יום ${g.day.num} הושלם!`}</h2>
-       <p><b>${g.day.takeawayHe}</b></p><p style="font-size:15px">השתמשתם ב־<bdi>${g.eggsUsed}</bdi> ביצים.</p>${why}
+       <p><b>${g.day.takeawayHe}</b></p><p style="font-size:15px">השתמשתם ב־<bdi dir="ltr">${g.eggsUsed}</bdi> ביצים.</p>${why}
        ${last ? `<button class="big" data-o="title">לתפריט</button>` : `<button class="big" data-o="next">ליום ${g.day.num + 1} ←</button>`}<button class="sec" data-o="again">שחקו שוב</button>`,
       { next: () => this.begin(this.dayIdx + 1), again: () => ((this.attempt += 1), this.startDay(this.dayIdx, true)), title: () => this.showTitle() },
     );
