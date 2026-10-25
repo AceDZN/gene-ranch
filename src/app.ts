@@ -258,7 +258,16 @@ export class App {
         }
         case 'released': {
           const c = this.ensureView(e.id);
-          const to = this.camera.position.clone().add(new THREE.Vector3(-Math.sin(this.player.yaw), 0, -Math.cos(this.player.yaw)).multiplyScalar(3)).setY(0);
+          // Hop off to a free spot in the meadow, away from the player and the nest.
+          let to = MEADOW_CENTER.clone();
+          for (let i = 0; i < 12; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const p = MEADOW_CENTER.clone().add(new THREE.Vector3(Math.cos(a), 0, Math.sin(a)).multiplyScalar(1 + Math.random() * (MEADOW_R - 1)));
+            if (p.distanceTo(this.player.pos.clone().setY(0)) > 3 && p.distanceTo(NEST_POS) > 2) {
+              to = p;
+              break;
+            }
+          }
           c.target.copy(to);
           c.fly = { kind: 'shoot', from: this.nozzle(), to, t: 0, dur: 0.55 };
           this.gun.fire(to);
@@ -798,6 +807,11 @@ export class App {
     const ped = this.world.group.children.find((o) => o.visible && o.children.some((k) => k.userData.kind === 'pedigree'));
     if (ped && this.game.day.pedigree) ped.traverse((o) => (o as THREE.Mesh).isMesh && objs.push(o));
     const hits = this.raycaster.intersectObjects(objs, false);
+    // A parent sitting in the nest wins over the big nest volume around it.
+    if (hits[0]?.object.userData.kind === 'nest') {
+      const parent = hits.find((h) => h.object.userData.kind === 'creature' && this.game.nest.includes(h.object.userData.id));
+      if (parent) return { kind: 'creature', id: parent.object.userData.id, point: parent.point };
+    }
     for (const h of hits) {
       const k = h.object.userData.kind as string | undefined;
       if (k === 'creature') return { kind: 'creature', id: h.object.userData.id, point: h.point };
@@ -929,7 +943,8 @@ export class App {
     save('gene-ranch-progress', this.progress);
     this.sfx.win();
     const last = this.dayIdx === DAYS.length - 1;
-    const why = `<p style="font-size:14px">★ סיימתם · ${g.mistakes === 0 ? '★' : '☆'} בלי מסירה שגויה · ${g.hintsUsed === 0 ? '★' : '☆'} בלי רמזים</p>`;
+    const lucky = g.unproven > 0 ? `<p style="font-size:15px">🍀 שימו לב: מסרתם ורוד שלא נבדק בהכלאת מבחן — הפעם היה לכם מזל!</p>` : '';
+    const why = `<p style="font-size:14px">★ סיימתם · ${g.mistakes === 0 ? '★' : '☆'} בלי מסירה שגויה · ${g.hintsUsed === 0 && g.unproven === 0 ? '★' : '☆'} בלי רמזים ועם הוכחות</p>${lucky}`;
     this.showModal(
       'win',
       `<div class="bigstars">${'★'.repeat(s)}<span class="off">${'★'.repeat(3 - s)}</span></div><h2>${last ? 'ניצחתם בתערוכה! 🏆' : `יום ${g.day.num} הושלם!`}</h2>

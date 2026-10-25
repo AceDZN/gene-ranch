@@ -100,7 +100,7 @@ const pupil = new THREE.SphereGeometry(0.062, 20, 16);
 const glint = new THREE.SphereGeometry(0.02, 8, 6);
 const footGeo = new THREE.SphereGeometry(0.1, 16, 12);
 const bodyGeo = new THREE.SphereGeometry(R, 48, 36);
-const hitGeo = new THREE.SphereGeometry(0.75, 10, 8);
+const hitGeo = new THREE.SphereGeometry(0.62, 10, 8);
 const ringGeo = new THREE.TorusGeometry(0.55, 0.035, 8, 40);
 
 function tailCurve(curly: boolean): THREE.Curve<THREE.Vector3> {

@@ -1061,3 +1061,34 @@ button {
 .rbtn.ped {
   background: #6b4fb0;
 }
+.tr {
+  z-index: 3;
+}
+.eggs {
+  white-space: nowrap;
+}
+.tr.many .order {
+  grid-template-columns: 44px 1fr;
+  padding: 14px 8px 6px;
+  margin-top: 10px;
+}
+.tr.many .order img {
+  width: 44px;
+  height: 44px;
+}
+.tr.many .order .ot {
+  font-size: 14px;
+}
+.tr.many .deliver {
+  padding: 5px;
+  font-size: 15px;
+}
+@media (min-width: 761px) and (max-height: 860px) {
+  .side .card img {
+    width: 64px;
+    height: 64px;
+  }
+  .side {
+    width: 230px;
+  }
+}

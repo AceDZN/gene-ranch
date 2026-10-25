@@ -49,13 +49,14 @@ export const PALETTES: Record<'ranch' | 'show', Palette> = {
     skyTop: '#1e1a52',
     skyHorizon: '#9a6ad6',
     skyBottom: '#ff9fc4',
-    sun: '#c9b8ff',
+    sun: '#fff0e6',
     fog: '#7b62b8',
     grass: '#4fc9b4',
     grass2: '#7fe0c4',
-    hemiSky: '#b9a8ff',
-    hemiGround: '#2f6b7a',
-    sunIntensity: 1.8,
+    // Light stays near-white so creature colours read true (pink must not look violet).
+    hemiSky: '#f1eaff',
+    hemiGround: '#5f8f96',
+    sunIntensity: 2.3,
     stars: true,
   },
 };

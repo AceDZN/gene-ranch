@@ -33,8 +33,8 @@ export interface HatchEntry {
   child: string;
   pheno: Phenotype;
   env: Env;
-  /** Chance range (from what was KNOWN at the time) that this egg would fill the first open phenotype order. */
-  odds?: [number, number] | null;
+  /** Per open order: chance range (from what was KNOWN at the time) that this egg would fill it. */
+  odds?: Record<string, [number, number] | null>;
   /** Punnett cell (row = nest slot 0 parent's allele, col = slot 1 parent's) per gene. */
   cell: Record<GeneId, [0 | 1, 0 | 1]>;
 }
@@ -92,6 +92,8 @@ export class Game {
   hatch: { t: number; child: Creature; entry: HatchEntry } | null = null;
   hatchLog: HatchEntry[] = [];
   mistakes = 0;
+  /** Deliveries made without evidence (e.g. a 'pure' pink never test-crossed): lucky if they work. */
+  unproven = 0;
   hintsUsed = 0;
   private hintIdx = 0;
   facts: Facts = new Map();
@@ -270,7 +272,7 @@ export class Game {
   }
   stars(): number {
     if (this.phase !== 'won') return 0;
-    return 1 + (this.mistakes === 0 ? 1 : 0) + (this.hintsUsed === 0 ? 1 : 0);
+    return 1 + (this.mistakes === 0 ? 1 : 0) + (this.hintsUsed === 0 && this.unproven === 0 ? 1 : 0);
   }
 
   // ---------- actions ----------
@@ -354,8 +356,9 @@ export class Game {
     };
     this.eggs--;
     this.eggsUsed++;
-    const open = this.orders.find((o) => !o.filled && (o.def.req.kind === 'phenotype' || o.def.req.kind === 'parentPheno'));
-    const entry: HatchEntry = { parents: [A.id, B.id], child: child.id, pheno: phenotypeOf(child.genotype, child.env), env: child.env, cell: r.pick, odds: open ? this.orderOdds(open) : null };
+    const odds: Record<string, [number, number] | null> = {};
+    for (const o of this.orders) if (!o.filled) odds[o.def.id] = this.orderOdds(o);
+    const entry: HatchEntry = { parents: [A.id, B.id], child: child.id, pheno: phenotypeOf(child.genotype, child.env), env: child.env, cell: r.pick, odds };
     this.hatch = { t: 0, child, entry };
     this.phase = 'hatching';
     this.emit({ type: 'hatchStart', child: child.id, cell: r.pick });
@@ -446,11 +449,15 @@ export class Game {
 
   /** Out-of-eggs explanation that separates impossible pairs from genuine bad luck. */
   private explainLuck(): string {
-    const eggs = this.hatchLog;
-    const zero = eggs.filter((e) => e.odds && e.odds[1] === 0).length;
-    const exact = eggs.filter((e) => e.odds && e.odds[0] === e.odds[1] && e.odds[0] > 0);
+    const stuck = this.orders.find((o) => !o.filled && !this.canStillFill(o));
+    if (!stuck) return '';
+    const id = stuck.def.id;
+    const eggs = this.hatchLog.filter((e) => e.odds && id in e.odds);
+    const zero = eggs.filter((e) => e.odds![id] && e.odds![id]![1] === 0).length;
+    const exact = eggs.filter((e) => e.odds![id] && e.odds![id]![0] === e.odds![id]![1] && e.odds![id]![0] > 0).map((e) => ({ odds: e.odds![id]! }));
     const parts: string[] = [];
-    if (zero) parts.push(`${zero} מהביצים היו מזוג שלא יכול לתת את מה שהוזמן (0% — אף תא בריבוע לא מתאים).`);
+    parts.push(`"${stuck.def.titleHe}":`);
+    if (zero) parts.push(`${zero} מהביצים היו מזוג שלא יכול לתת את זה (0% — אף תא בריבוע לא מתאים).`);
     if (exact.length) {
       const miss = exact.reduce((m, e) => m * (1 - e.odds![0]), 1);
       const ps = [...new Set(exact.map((e) => pct(e.odds![0])))].join(' / ');
@@ -470,6 +477,7 @@ export class Game {
     const req = o.def.req;
     const hinted = this.hintsUsed > 0;
     const certain = this.isCertainFor(o, id);
+    if (req.kind === 'purePair' && this.streak(id, req.gene) < 2) this.unproven++;
     if (req.kind === 'carrier' && isHomozygous(c.genotype[req.gene])) {
       this.mistakes++;
       this.emit({

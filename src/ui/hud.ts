@@ -125,6 +125,7 @@ export class Hud {
     // Top-right: plaque + orders.
     const stars = g.phase === 'won' ? g.stars() : 0;
     const orders = g.orders.map((o) => this.orderHtml(g, o, sel?.id ?? null)).join('');
+    this.els.tr.classList.toggle('many', g.orders.length >= 3);
     this.set(
       'tr',
       `<div class="plaque"><span class="day">יום ${g.day.num} · ${esc(g.day.titleHe)}</span><span class="stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</span></div>${orders}`,

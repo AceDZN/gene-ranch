@@ -1,6 +1,6 @@
 # Gene Ranch — חוות הגנים
 
-A first-person 3D creature ranch for Hebrew-speaking grade-9 science students (Israeli curriculum, per [Workbook](https://science.workbook.co.il) grade 9, chapter 8 — heredity). Vacuum up fluffy **Gnoomies**, sit two in the breeding nest, watch a floating Punnett square spin, and hatch eggs to fill village orders. Every trait follows real Mendelian rules with real (seeded) randomness, so guessing wastes eggs and reasoning wins.
+A first-person 3D creature ranch for Hebrew-speaking grade-9 science students (Israeli curriculum, per [Workbook](https://science.workbook.co.il) grade 9, chapter 8 — heredity). Vacuum up fluffy **Poofies (פופים)**, sit two in the breeding nest, watch a floating Punnett square spin, and hatch eggs to fill village orders. Every trait follows real Mendelian rules with real (seeded) randomness, so guessing wastes eggs and reasoning wins.
 
 Three.js + Vite + TypeScript, Hebrew RTL UI (bundled Rubik font), Tripo-generated rigged models. No backend, no accounts, no network calls at runtime.
 
@@ -41,7 +41,7 @@ Mute and reduced-motion toggles are on the title and pause screens.
 - Pure-TS genetics (`src/genetics/`) with a seeded RNG, a deduction engine that only shows what the player can know ("E ?"), and an honest Punnett lens (ranges for unknown parents; after a hatch it lights every cell matching the baby's phenotype rather than revealing the genotype).
 - Consequences instead of "wrong" popups: a surprise baby, a sweating villager, a village test that returns your "carrier", grand-babies that turn blue, out-of-eggs with an odds explanation.
 - Hatch log (expected vs observed), learning-event log in `localStorage`, star ratings (finish / no wrong delivery / no hints).
-- Tripo models: rigged Gnoomie (idle/walk/cheer) with procedural ears, tails, antenna and stripe/spot patterns so every genotype renders exactly; rigged villager (idle/cheer/frustrated); barn, nest, net gun, order board. See [ASSETS.md](ASSETS.md).
+- Tripo models: rigged Poofie (`gnoomie.glb`) (idle/walk/cheer) with procedural ears, tails, antenna and stripe/spot patterns so every genotype renders exactly; rigged villager (idle/cheer/frustrated); barn, nest, net gun, order board. See [ASSETS.md](ASSETS.md).
 - Test hooks: `window.render_game_to_text()`, deterministic `window.advanceTime(ms)`; `scripts/play.mjs` plays a day through real mouse clicks with Playwright and saves screenshots.
 
 Not implemented / planned: island unlock map, more traits per day, saving a ranch between days (each day starts from an authored roster), multiple languages.
