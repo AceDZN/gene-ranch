@@ -389,6 +389,21 @@ describe('science-review regressions', () => {
     expect(out && out.type === 'outOfEggs' && out.explainHe).toContain('0%');
     expect(out && out.type === 'outOfEggs' && out.explainHe).not.toContain('מזל רע');
   });
+  it('no free guessing at 0 eggs: a wrong pure pair the village cannot test ends the day', () => {
+    let ended = 0;
+    for (let s = 1; s <= 60; s++) {
+      const g = new Game(2, s);
+      catchAll(g);
+      g.eggs = 0;
+      g.deliver('pure-pink', 'varda');
+      g.deliver('pure-pink', 'sukaria');
+      if (!g.orders[0].filled) {
+        expect(g.phase).toBe('outOfEggs');
+        ended++;
+      }
+    }
+    expect(ended).toBeGreaterThan(0);
+  });
   it('the show only accepts babies bred on the island', () => {
     const g = new Game(5, 1);
     catchAll(g);

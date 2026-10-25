@@ -133,7 +133,7 @@ export class Hud {
     this.set('coach', esc(ui.coach));
     // Bottom-left: egg button + nest temperature.
     const full = !!g.nestPair();
-    const eggLabel = g.phase === 'hatching' ? '⏩ מהר' : !full ? 'שימו 2 בקן' : g.eggs > 0 ? `הטילו ביצה · <bdi dir="ltr">${g.eggs}</bdi>` : 'אין ביצים';
+    const eggLabel = g.phase === 'hatching' ? '⏩ מהר' : !full ? `שימו 2 בקן · <bdi dir="ltr">🥚${g.eggs}</bdi>` : g.eggs > 0 ? `הטילו ביצה · <bdi dir="ltr">${g.eggs}</bdi>` : 'אין ביצים';
     this.set(
       'bl',
       `${g.day.coldNest ? `<div class="temp"><button data-act="warm" class="${g.nestTemp === 'warm' ? 'on' : ''}">🔥 קן חם</button><button data-act="cold" class="${g.nestTemp === 'cold' ? 'on cold' : ''}">❄️ קן קר</button></div>` : ''}

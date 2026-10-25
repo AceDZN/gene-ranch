@@ -183,7 +183,7 @@ export class App {
     this.world.frost.visible = false;
     // Portrait phones see a narrow slice: aim between the wild Poofies and the nest.
     const portrait = this.camera.aspect < 0.8;
-    this.player.place(SPAWN, portrait ? SPAWN_LOOK.clone().add(new THREE.Vector3(0.5, 0.5, 0)) : SPAWN_LOOK);
+    this.player.place(SPAWN, portrait ? new THREE.Vector3(-0.35, 0.9, 2.4) : SPAWN_LOOK);
     this.egg.group.visible = false;
     this.revealPheno = null;
     this.boardKey = '';
@@ -193,8 +193,10 @@ export class App {
       const ctl = this.ensureView(c.id);
       const n = wild.length;
       // Spread across the view, left of the nest, nearest first.
-      const span = n <= 2 ? 1.9 : 3.0;
-      const x = -2.0 - (n > 2 ? 0.6 : 0) + (n === 1 ? 1 : (k * span) / (n - 1));
+      // Portrait phones see a narrow slice: keep the wild ones close to the centre.
+      const narrow = this.camera.aspect < 0.8;
+      const span = narrow ? (n <= 2 ? 1.1 : 1.8) : n <= 2 ? 1.9 : 3.0;
+      const x = (narrow ? -1.4 : -2.0) - (n > 2 ? 0.4 : 0) + (n === 1 ? 1 : (k * span) / (n - 1));
       const z = 4.5 + (k % 2) * 0.8 - (n > 3 ? 0.6 : 0);
       ctl.view.root.position.set(x, 0, z);
       ctl.target.set(x, 0, z);
@@ -317,13 +319,18 @@ export class App {
           c.fly = { kind: 'deliver', from: this.nozzle(), to: VILLAGER_POS.clone().add(new THREE.Vector3(0.6, 0, 0.6)), t: 0, dur: 0.6 };
           this.gun.fire(VILLAGER_POS);
           this.sfx.shoot();
-          this.villagerHop = this.world.hasVillagerRig ? 0 : 1.2;
-          this.world.villagerAnim('cheer', 3);
           this.actionsDone.delivered = true;
-          this.later(550, () => {
-            this.sfx.cheer();
-            this.confetti.burst(VILLAGER_POS.clone().setY(1.6), e.filled ? 120 : 50);
-          });
+          // Half of a pure pair isn't a success yet: no party until the village has tested the pair.
+          const pending = !e.filled && g.orders.find((o) => o.def.id === e.order)?.def.req.kind === 'purePair';
+          if (pending) this.hud.toast('הכפר מחכה לבן הזוג השני — ואז יבדוק את הזוג.');
+          else {
+            this.villagerHop = this.world.hasVillagerRig ? 0 : 1.2;
+            this.world.villagerAnim('cheer', 3);
+            this.later(550, () => {
+              this.sfx.cheer();
+              this.confetti.burst(VILLAGER_POS.clone().setY(1.6), e.filled ? 120 : 50);
+            });
+          }
           if (e.filled && g.phase !== 'won') this.hud.toast('הזמנה הושלמה! 🎉');
           break;
         }

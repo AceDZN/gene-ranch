@@ -516,6 +516,17 @@ export class Game {
           // The village's own breeding test took time: it costs eggs from your basket.
           const cost = Math.min(this.eggs, 3);
           this.eggs -= cost;
+          if (cost < 3) {
+            // No eggs left to pay for another village test: the day ends (retry with a fresh basket).
+            this.mistakes++;
+            this.phase = 'outOfEggs';
+            this.emit({
+              type: 'outOfEggs',
+              explainHe: 'הכפר גידל את הזוג — ובין הנכדים הופיע פופי כחול (pp): לפחות אחד מהשניים היה נשא. לבדיקה נוספת צריך 3 ביצים, ולא נשארו. הפעם: בדקו כל ורוד בהכלאת מבחן עם כחלי לפני המסירה.',
+            });
+            this.logL('deliver', orderId, 'wrong-no-eggs', hinted);
+            return false;
+          }
           const rec = GENES[req.gene].alleles[1];
           const dom = GENES[req.gene].alleles[0];
           this.emit({

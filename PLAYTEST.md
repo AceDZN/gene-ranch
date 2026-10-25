@@ -68,7 +68,15 @@ Another agent that hadn't seen the design played the title, Day 1, Day 2 (×3) a
 
 - **Not changed:** heavy terminology in the first minute (kept, but the intro is shorter); names repeat across days (babies are per-day).
 
-A short re-check of these fixes was requested from the same playtester (results appended to its report if completed).
+**Re-check** (same playtester, updated build, real clicks):
+- **Confirmed fixed:** Day 2 (no baby shortcut; the order offered the wild parent after the first floppy pup); Day 3 offers are honest and the pair verdict doesn't name anyone; fair out-of-eggs on Day 1; the stale panel is gone; on the phone the hatch panel is visible and the view turns to the nest.
+- **Still found, then fixed in a last pass** (46 tests pass after it):
+  - a Day 3 soft-lock: at 0 eggs you could keep gambling pure pairs for free. Now a wrong pair the village can't test ends the day.
+  - confetti for half of an untested pair (now a neutral "waiting for the second" note).
+  - egg count hidden before seating.
+  - phone start framing.
+  - a gentler Day 1 opening line.
+- **Not changed:** creatures sometimes face away and name tags can overlap; the Day 3 lens lights a "PP" cell plus "?" cells for a pink baby whose card says "P ?". That's consistent: it could be either, but it may still read oddly.
 
 ## Not verified
 
