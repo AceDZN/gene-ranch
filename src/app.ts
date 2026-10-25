@@ -175,6 +175,7 @@ export class App {
     this.dayIdx = i;
     const seed = this.seedParam ?? Math.floor(Math.random() * 2 ** 31);
     this.game = new Game(i, seed + (this.attempt - 1) * 7919, this.attempt);
+    this.timers = [];
     for (const c of this.views.values()) (c.view.dispose(), c.tag.removeFromParent());
     this.views.clear();
     this.world.setPalette(this.game.day.island);
@@ -289,13 +290,12 @@ export class App {
           this.hud.setHatch(g, e.id);
           if (e.matches.length) {
             this.confetti.burst(HATCH_SPOT.clone().setY(1), 90);
-            setTimeout(() => this.sfx.cheer(), 150);
-            this.hud.toast(`${g.get(e.id).name} מתאים להזמנה! לחצו "מסרו" בהזמנה ⭐`);
+            this.later(150, () => this.sfx.cheer());
           } else if (!g.day.lens) {
             const p = g.pheno(e.id);
             this.hud.toast(`בקע ${g.get(e.id).name}: ${g.day.genes.map((gene) => phenoName(gene, p[gene])).join(' · ')}`);
           }
-          if (!e.toBelt) this.hud.toast('הכיס מלא — הגור קפץ לאחו. שחררו גנומי כדי לפנות מקום.');
+          if (!e.toBelt) this.hud.toast('הכיס מלא — הגור קפץ לאחו. שחררו פופי כדי לפנות מקום.');
           break;
         }
         case 'delivered': {
@@ -307,10 +307,10 @@ export class App {
           this.villagerHop = this.world.hasVillagerRig ? 0 : 1.2;
           this.world.villagerAnim('cheer', 3);
           this.actionsDone.delivered = true;
-          setTimeout(() => {
+          this.later(550, () => {
             this.sfx.cheer();
             this.confetti.burst(VILLAGER_POS.clone().setY(1.6), e.filled ? 120 : 50);
-          }, 550);
+          });
           if (e.filled && g.phase !== 'won') this.hud.toast('הזמנה הושלמה! 🎉');
           break;
         }
@@ -321,8 +321,8 @@ export class App {
           this.sfx.shoot();
           this.sweatT = 3;
           this.world.villagerAnim('frustrated_01', 3.5);
-          setTimeout(() => this.sfx.aww(), 600);
-          setTimeout(() => this.showExplain('אופס — לא בדיוק…', e.explainHe, 'הבנתי, ננסה שוב'), 1300);
+          this.later(600, () => this.sfx.aww());
+          this.later(1300, () => this.showExplain('אופס — לא בדיוק…', e.explainHe, 'הבנתי, ננסה שוב'));
           break;
         }
         case 'rejected':
@@ -333,13 +333,13 @@ export class App {
           this.showExplain(`הסבתא הביאה עוד ${e.n} ביצים 🧺`, e.explainHe, 'יאללה, ממשיכים!');
           break;
         case 'outOfEggs':
-          setTimeout(() => this.showFail(e.explainHe), 1600);
+          this.later(1600, () => this.showFail(e.explainHe));
           break;
         case 'won':
-          setTimeout(() => this.showWin(), 1700);
+          this.later(1700, () => this.showWin());
           break;
         case 'beltFull':
-          this.hud.toast('הכיס מלא (6). בחרו גנומי ולחצו "שחרור" כדי לפנות מקום.');
+          this.hud.toast('הכיס מלא (6). בחרו פופי ולחצו "שחרור" כדי לפנות מקום.');
           this.sfx.soft();
           break;
         case 'hint':
@@ -348,6 +348,17 @@ export class App {
       }
     }
     if (evs.some((e) => e.type === 'won' || e.type === 'outOfEggs')) this.saveLearning();
+  }
+
+  /** Run fn after `ms` of GAME time (paused time doesn't count; advanceTime drives it). */
+  private timers: { at: number; fn: () => void }[] = [];
+  private later(ms: number, fn: () => void) {
+    this.timers.push({ at: this.time + ms / 1000, fn });
+  }
+  private runTimers() {
+    const due = this.timers.filter((t) => t.at <= this.time);
+    this.timers = this.timers.filter((t) => t.at > this.time);
+    for (const t of due) t.fn();
   }
 
   private saveLearning() {
@@ -389,6 +400,7 @@ export class App {
     this.time += dt;
     g.tick(dt * 1000);
     this.handleEvents(g.drainEvents());
+    this.runTimers();
     this.player.update(dt);
     this.world.update(dt, this.time);
     this.world.frost.visible = g.nestTemp === 'cold';
@@ -522,7 +534,7 @@ export class App {
           const a = Math.random() * Math.PI * 2;
           const r = Math.sqrt(Math.random()) * MEADOW_R;
           const p = new THREE.Vector3(MEADOW_CENTER.x + Math.cos(a) * r, 0, MEADOW_CENTER.z + Math.sin(a) * r);
-          if (p.distanceTo(NEST_POS) > 2 && p.distanceTo(BOARD_POS) > 1.8 && p.distanceTo(VILLAGER_POS) > 1 && p.distanceTo(SPAWN.clone().setY(0)) > 1.6) {
+          if (p.distanceTo(NEST_POS) > 2 && p.distanceTo(BOARD_POS) > 1.8 && p.distanceTo(VILLAGER_POS) > 1 && p.distanceTo(this.player.pos.clone().setY(0)) > 2.2) {
             ctl.target.copy(p);
             break;
           }
@@ -666,7 +678,7 @@ export class App {
     let text = '';
     let target: THREE.Vector3 | null = null;
     const nestCount = g.nest.filter(Boolean).length;
-    const anyMatch = g.orders.map((o) => g.deliverable(o.def.id)).find((x) => !!x) ?? null;
+    const anyMatch = g.orders.filter((o) => o.def.req.kind !== 'purePair').map((o) => g.deliverable(o.def.id)).find((x) => !!x) ?? null;
     const selMatch = !!anyMatch;
     if (g.phase === 'hatching') text = 'הביצה בוקעת...';
     else if (g.phase !== 'play') text = '';
@@ -675,7 +687,7 @@ export class App {
       target = VILLAGER_POS.clone().setY(2.3);
     } else if (nestCount + g.belt.length < 2 && g.list('meadow').length) {
       const near = g.list('meadow')[0];
-      text = '👆 לחצו על גנומי כדי לשאוב אותו לרשת';
+      text = '👆 לחצו על פופי כדי לשאוב אותו לרשת';
       const c = this.views.get(near.id);
       if (c) target = c.view.root.position.clone().setY(1.75);
     } else if (nestCount < 2 && g.belt.length) {
@@ -805,12 +817,12 @@ export class App {
     } else if (hit.kind === 'nest') {
       const id = g.selected ?? g.belt[0];
       if (id) {
-        if (!g.place(id) && g.nest[0] && g.nest[1]) this.hud.toast('הקן מלא. לחצו על גנומי בקן כדי להחזיר אותו לרשת.');
-      } else if (!g.nestPair()) this.hud.toast('קודם שאבו גנומי מהאחו 👆');
+        if (!g.place(id) && g.nest[0] && g.nest[1]) this.hud.toast('הקן מלא. לחצו על פופי בקן כדי להחזיר אותו לרשת.');
+      } else if (!g.nestPair()) this.hud.toast('קודם שאבו פופי מהאחו 👆');
     } else if (hit.kind === 'board') {
       const o = g.orders.find((x) => g.deliverable(x.def.id));
       if (o) g.deliver(o.def.id, g.deliverable(o.def.id)!);
-      else this.hud.toast('בחרו בכיס גנומי שמתאים להזמנה, ואז "מסרו".');
+      else this.hud.toast('בחרו בכיס פופי שמתאים להזמנה, ואז "מסרו".');
     } else if (hit.kind === 'pedigree') this.showPedigree();
     else if (hit.kind === 'ground') this.player.goTo(hit.point);
   }
@@ -863,7 +875,7 @@ export class App {
     DAYS.forEach((_, i) => (handlers['day' + i] = () => this.begin(i)));
     this.showModal(
       'title',
-      `<div class="logo">🥚🐾</div><h1>חוות הגנים</h1><p>שאבו גנומים חמודים, הכליאו אותם בקן ובקעו ביצות.<br>כל תכונה נקבעת מזוג אללים — וכל ביצה היא הגרלה.</p>
+      `<div class="logo">🥚🐾</div><h1>חוות הגנים</h1><p>שאבו פופים חמודים, הכליאו אותם בקן ובקעו ביצים.<br>במשחק הזה כל תכונה נקבעת מגן אחד עם זוג אללים — וכל ביצה היא הגרלה.</p>
        <button class="big" data-o="play">${this.progress.unlocked > 1 ? 'המשיכו לשחק' : 'שחקו!'}</button>${this.daysHtml()}${this.toggles()}`,
       handlers,
     );
@@ -879,13 +891,13 @@ export class App {
     const wants = g.orders.map((o) => `<div><img src="${portraitURL(o.def.icon, 128)}" alt="">${o.def.titleHe}</div>`).join('');
     const how =
       g.day.num === 1
-        ? `<div class="how"><span>👆 לחצו על גנומי — שואבים</span><span>🪺 לחצו על הקן — מושיבים</span><span>🥚 ביצה — בוקעים</span><span>📦 מסרו להזמנה</span></div><p style="font-size:14px;opacity:.8">גוררים כדי להסתכל מסביב · WASD כדי ללכת (לא חובה)</p>`
+        ? `<div class="how"><span>👆 לחצו על פופי — שואבים</span><span>🪺 לחצו על הקן — מושיבים</span><span>🥚 ביצה — בוקעים</span><span>📦 מסרו להזמנה</span></div><p style="font-size:14px;opacity:.8">גוררים כדי להסתכל מסביב · WASD כדי ללכת (לא חובה)</p>`
         : '';
     this.hudEl.hidden = false;
     this.showModal(
       'intro',
       `<h2>יום ${g.day.num} · ${g.day.titleHe}</h2><p>${g.day.introHe}</p><div class="wants">${wants}</div>
-       <p style="font-size:15px">🥚 × <bdi>${g.eggs}</bdi> ביצות${g.day.hints ? '' : ' · בלי רמזים, בלי עדשת פאנט'}</p>${how}<button class="big" data-o="go">יאללה!</button>`,
+       <p style="font-size:15px">🥚 × <bdi>${g.eggs}</bdi> ביצים${g.day.hints ? '' : ' · בלי רמזים, בלי עדשת פאנט'}</p>${how}<button class="big" data-o="go">יאללה!</button>`,
       { go: () => this.closeOverlay() },
     );
   }
@@ -930,7 +942,7 @@ export class App {
   private showFail(explain: string) {
     this.showModal(
       'fail',
-      `<h2>נגמרו הביצים 🥚</h2><p>${explain}</p><p style="font-size:15px">אל דאגה — הגנומים מחכים. ננסה שוב עם סל ביצים חדש?</p><button class="big" data-o="retry">נסו שוב ↻</button>`,
+      `<h2>נגמרו הביצים 🥚</h2><p>${explain}</p><p style="font-size:15px">אל דאגה — הפופים מחכים. ננסה שוב עם סל ביצים חדש?</p><button class="big" data-o="retry">נסו שוב ↻</button>`,
       { retry: () => ((this.attempt += 1), this.startDay(this.dayIdx, true)) },
     );
   }
@@ -987,9 +999,22 @@ export class App {
   screenOf(id: string): { x: number; y: number } | null {
     const c = this.views.get(id);
     if (!c || !c.view.root.visible) return null;
-    const p = c.view.root.position.clone().setY(0.45).project(this.camera);
+    this.camera.updateMatrixWorld();
+    const p = c.view.root.position.clone().add(new THREE.Vector3(0, 0.45, 0)).project(this.camera);
+    if (p.z > 1) return null;
     const r = this.canvas.getBoundingClientRect();
     return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height };
+  }
+  /** Test helper standing in for a drag: turn the view toward a creature. */
+  lookAtCreature(id: string) {
+    const c = this.views.get(id);
+    if (!c) return;
+    this.player.faceToward(c.view.root.position, 1);
+    this.player.pitch = -0.2;
+    this.player.update(0);
+  }
+  openPedigree() {
+    this.showPedigree();
   }
   screenOfNest(): { x: number; y: number } {
     const p = NEST_POS.clone().setY(0.4).project(this.camera);

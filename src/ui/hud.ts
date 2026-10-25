@@ -87,7 +87,7 @@ export class Hud {
       else if (a === 'pause') this.h.pause();
       else if (a === 'mute') this.h.mute();
       else if (a === 'pedigree') this.h.pedigree();
-      else if (a === 'log') this.els.log.classList.toggle('open');
+      else if (a === 'log') this.els.log.classList.toggle(window.innerWidth <= 760 ? 'open' : 'closed');
       else if (a === 'closecard') this.hatchInfo = null;
     });
     // Keep HUD pointer events from reaching the 3D canvas.
@@ -118,7 +118,9 @@ export class Hud {
       `<button class="rbtn" data-act="pause" aria-label="השהיה">⏸</button>
        <button class="rbtn" data-act="mute" aria-label="צליל">${ui.muted ? '🔇' : '🔊'}</button>
        ${g.day.hints ? `<button class="rbtn" data-act="hint" aria-label="רמז">💡</button>` : ''}
-       <div class="eggs ${g.eggs <= 2 ? 'low' : ''}" title="ביצות שנשארו">🥚 <bdi>× ${g.eggs}</bdi></div>`,
+       <button class="rbtn" data-act="log" aria-label="יומן בקיעות">📊</button>
+       ${g.day.pedigree ? `<button class="rbtn ped" data-act="pedigree" aria-label="לוח השושלת">📜</button>` : ''}
+       <div class="eggs ${g.eggs <= 2 ? 'low' : ''}" title="ביצים שנשארו">🥚 <bdi>× ${g.eggs}</bdi></div>`,
     );
     // Top-right: plaque + orders.
     const stars = g.phase === 'won' ? g.stars() : 0;
@@ -146,7 +148,7 @@ export class Hud {
       }
       const c = g.get(id);
       const p = g.pheno(id);
-      const match = g.orders.some((o) => g.canDeliver(o.def.id, id));
+      const match = g.orders.some((o) => g.fits(o.def.id, id));
       slots.push(
         `<button class="slot full ${g.selected === id ? 'sel' : ''} ${match ? 'match' : ''}" data-act="select" data-id="${id}" aria-label="${esc(c.name)}"><img src="${portraitURL(visibleTraits(g, p), 96)}" alt=""><span class="nm">${esc(c.name)}</span></button>`,
       );
@@ -158,7 +160,7 @@ export class Hud {
     // Hatch log.
     this.set('log', this.logHtml(g));
     // Side chips.
-    this.set('chip', `${g.day.pedigree ? `<button data-act="pedigree">📜 לוח השושלת</button>` : ''}<button data-act="log" class="logbtn">📊 יומן</button>`);
+    this.set('chip', '');
   }
 
   private orderHtml(g: Game, o: OrderState, _selId: string | null): string {
@@ -205,18 +207,19 @@ export class Hud {
         const streak = g.streak(id, gene);
         const rec = GENES[gene].alleles[1];
         const recName = phenoName(gene, GENES[gene].phenotype([rec, rec], 'warm'));
-        const note = set.length > 1 && streak > 0 ? `<div class="note">${streak} גורים עם בן זוג נסוג — אף אחד לא ${recName}. אם זה נשא, הסיכוי לזה <bdi>${frac(Math.pow(0.5, streak))}</bdi>. עדיין לא הוכחה!</div>` : '';
+        const note = set.length > 1 && streak > 0 ? `<div class="note">${streak} גורים עם בן זוג רצסיבי — אף אחד מהם לא יצא ${recName}. אם זה נשא, הסיכוי לזה <bdi>${frac(Math.pow(0.5, streak))}</bdi>. עדיין לא הוכחה!</div>` : '';
         const tiles = `<span class="tiles"><bdi>${al.map((a) => `<span class="tile ${a === '?' ? 'q' : ''}">${a}</span>`).join('')}</bdi></span>`;
         return `<div class="row"><div><div class="gn">${GENES[gene].nameHe}:</div><b>${phenoName(gene, p[gene])}</b> ${badge}</div>${tiles}</div>${note}`;
       })
       .join('');
+    const sexTxt = `<div class="note">${c.sex === 'f' ? '♀ נקבה' : '♂ זכר'}</div>`;
     const parents = c.parents ? `<div class="note">הורים: ${c.parents.map((pid) => esc(g.get(pid).name)).join(' × ')}${c.env === 'cold' ? ' · גדל בקן הקר ❄️' : ''}</div>` : '';
     const tag = c.tagHe ? `<span class="tag">${esc(c.tagHe)}</span>` : '';
     const canPlace = g.phase === 'play' && (!g.nest[0] || !g.nest[1]);
     return `<div class="card">
       <div class="ch">${esc(c.name)}${tag}</div>
       <img src="${portraitURL(visibleTraits(g, p), 128)}" alt="">
-      <div class="rows">${rows}${parents}</div>
+      <div class="rows">${rows}${parents}${sexTxt}</div>
       <div class="acts">
         <button data-act="place" data-id="${id}" ${canPlace ? '' : 'disabled'}>🪺 לקן</button>
         <button class="ghost" data-act="release" data-id="${id}">🌿 שחרור</button>
@@ -267,7 +270,7 @@ export class Hud {
     }).join('');
     const open = g.orders.find((o) => !o.filled && o.def.req.kind === 'phenotype');
     const r = open ? g.orderOdds(open) : null;
-    const match = g.orders.some((o) => g.canDeliver(o.def.id, id));
+    const match = g.orders.some((o) => g.fits(o.def.id, id));
     const tail = match
       ? `<b>מתאים להזמנה! ⭐</b>`
       : open && r
@@ -294,7 +297,7 @@ export class Hud {
           const n = entries.filter((e) => e.pheno[gene] === ph).length;
           const obs = entries.length ? n / entries.length : 0;
           const ex = odds?.get(ph);
-          const exTxt = ex ? pctRange(ex) : '?';
+          const exTxt = ex ? `<bdi>${pctRange(ex)}</bdi>` : '?';
           rows += `<div class="lr"><img src="${portraitURL({ [gene]: ph }, 52)}" alt=""><div><div class="bar"><i style="width:${obs * 100}%"></i>${ex && ex[0] === ex[1] ? `<b style="left:${ex[0] * 100}%"></b>` : ''}</div><div class="note">${phenoName(gene, ph)}</div></div><div><bdi>${n}/${entries.length}</bdi><div class="note">צפוי ${exTxt}</div></div></div>`;
         }
       }

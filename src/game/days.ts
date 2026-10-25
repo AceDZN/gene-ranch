@@ -14,12 +14,13 @@ export interface CreatureSpec {
   tagHe?: string;
   /** Higher = flashier. Used only by tests for the "always breed the prettiest" strategy. */
   pretty?: number;
+  sex?: 'f' | 'm';
 }
 
 export type Requirement =
-  | { kind: 'phenotype'; pheno: Partial<Record<GeneId, Pheno>> }
-  /** Shows the dominant trait but must truly be heterozygous. */
-  | { kind: 'carrier'; gene: GeneId }
+  | { kind: 'phenotype'; pheno: Partial<Record<GeneId, Pheno>>; bredOnly?: boolean }
+  /** Shows the dominant trait but must truly be heterozygous; `wildOnly` = one of the day's wild candidates. */
+  | { kind: 'carrier'; gene: GeneId; wildOnly?: boolean }
   /** Two creatures with the phenotype that must truly be homozygous (a pure line). */
   | { kind: 'purePair'; gene: GeneId; pheno: Pheno }
   /** Siblings from the same two parents covering every listed phenotype. */
@@ -68,7 +69,7 @@ export const DAYS: DayDef[] = [
     id: 'd1-big-ears',
     num: 1,
     titleHe: 'אוזניים גדולות',
-    introHe: 'בובו ולולו נראים זקופי־אוזניים, אבל שניהם נשאים (Ee) של אוזניים שמוטות. בקעו גור עם אוזניים שמוטות!',
+    introHe: 'בובו ולולו נראים זקופי־אוזניים, אבל שניהם נשאים (Ee) של אוזניים שמוטות. השיגו מהם גור עם אוזניים שמוטות!',
     genes: ['ears'],
     eggs: 8,
     bonusEggs: 4,
@@ -81,18 +82,18 @@ export const DAYS: DayDef[] = [
       { key: 'bobo', name: 'בובו', geno: 'Ee', loc: 'meadow', fact: 'Ee', tagHe: 'נשא' },
       { key: 'lulu', name: 'לולו', geno: 'Ee', loc: 'meadow', fact: 'Ee', tagHe: 'נשא' },
     ],
-    orders: [{ id: 'floppy', titleHe: 'גנומי עם אוזניים שמוטות', req: { kind: 'phenotype', pheno: { ears: 'floppy' } }, icon: { ears: 'floppy' } }],
+    orders: [{ id: 'floppy', titleHe: 'פופי עם אוזניים שמוטות', req: { kind: 'phenotype', pheno: { ears: 'floppy' } }, icon: { ears: 'floppy' } }],
     hintsHe: [
-      'שאבו את שני הגנומים, הניחו אותם בקן ולחצו על הביצה.',
+      'שאבו את שני הפופים, הניחו אותם בקן ולחצו על הביצה.',
       'רק תא אחד מתוך ארבעה בריבוע הוא ee. כל ביצה היא הגרלה חדשה — אל תוותרו אחרי ביצה אחת!',
     ],
-    takeawayHe: 'שני הורים זקופים יכולים להוליד גור שמוט: האלל הנסוג e היה מוסתר אצל שניהם.',
+    takeawayHe: 'שני הורים זקופים יכולים להוליד גור שמוט: האלל הרצסיבי (הנסוג) e היה מוסתר אצל שניהם.',
   },
   {
     id: 'd2-hidden-carrier',
     num: 2,
     titleHe: 'הנשא הנסתר',
-    introHe: 'אחד משלושת הגנומים הזקופים הוא נשא סודי (Ee). הכפר מקבל רק נשא מוכח — עם גור שמוט כהוכחה. פיפ השמוט (ee) מאתמול כבר אצלכם.',
+    introHe: 'אחד משלושת הפופים הזקופים הוא נשא סודי (Ee). הכפר מקבל רק נשא מוכח — עם גור שמוט כהוכחה. פיפ השמוט (ee) מאתמול כבר אצלכם.',
     genes: ['ears'],
     eggs: 10,
     hints: true,
@@ -109,18 +110,18 @@ export const DAYS: DayDef[] = [
         { key: 'shimshi', name: 'שמשי', geno: g[2], loc: 'meadow' },
       ];
     },
-    orders: [{ id: 'carrier', titleHe: 'נשא מוכח (Ee)', req: { kind: 'carrier', gene: 'ears' }, icon: { ears: 'upright' } }],
+    orders: [{ id: 'carrier', titleHe: 'נשא מוכח (Ee)', req: { kind: 'carrier', gene: 'ears', wildOnly: true }, icon: { ears: 'upright' } }],
     hintsHe: [
       'הכלאת מבחן: הכליאו מועמד זקוף עם פיפ השמוט (ee).',
       'גור שמוט אחד מספיק כדי להוכיח שההורה הזקוף נשא. גורים זקופים בלבד — עוד לא הוכחה.',
     ],
-    takeawayHe: 'הכלאת מבחן עם פרט נסוג (ee) חושפת נשא: גור נסוג אחד מוכיח שההורה הוא Ee.',
+    takeawayHe: 'הכלאת מבחן עם פרט רצסיבי (ee) חושפת נשא: גור רצסיבי אחד מוכיח שההורה הוא Ee.',
   },
   {
     id: 'd3-pure-line',
     num: 3,
     titleHe: 'קו טהור',
-    introHe: 'ורוד (P) שולט על כחול (p). הכפר רוצה זוג ורודים טהורים (PP) — כאלה שגם הנכדים שלהם תמיד יהיו ורודים.',
+    introHe: 'ורוד (P) שולט על כחול (p). הכפר רוצה זוג ורודים טהורים (PP) — כאלה שגם הנכדים שלהם תמיד יהיו ורודים. את PP אי אפשר לראות — רק להשתכנע מהגורים.',
     genes: ['color'],
     eggs: 10,
     hints: true,
@@ -140,7 +141,7 @@ export const DAYS: DayDef[] = [
     orders: [{ id: 'pure-pink', titleHe: 'זוג ורודים טהורים (PP)', req: { kind: 'purePair', gene: 'color', pheno: 'pink' }, icon: { color: 'pink' } }],
     hintsHe: [
       'הכליאו כל ורוד עם כחלי הכחול (pp). גור כחול = ההורה הוורוד נשא (Pp).',
-      'גורים ורודים בלבד לא מוכיחים PP — אבל כל גור ורוד נוסף מקטין את הסיכוי שזה נשא (חצי, רבע, שמינית...).',
+      'גורים ורודים בלבד לא מוכיחים PP. אבל אם הוורוד נשא, הסיכוי לקבל ממנו n גורים ורודים ברצף הוא רק ½, ¼, ⅛... — ככל שהרצף ארוך יותר, קשה יותר להאמין שהוא נשא.',
     ],
     takeawayHe: 'הומוזיגוט דומיננטי (PP) ונשא (Pp) נראים אותו דבר. רק הצאצאים חושפים את ההבדל.',
   },
@@ -157,14 +158,14 @@ export const DAYS: DayDef[] = [
     coldNest: false,
     island: 'ranch',
     roster: () => [
-      { key: 'zebra', name: 'זברה', geno: 'SS', loc: 'meadow' },
-      { key: 'nekudi', name: 'נקודי', geno: 'DD', loc: 'meadow' },
+      { key: 'zebra', name: 'זברה', geno: 'SS', loc: 'meadow', fact: 'SS', tagHe: 'טהור' },
+      { key: 'nekudi', name: 'נקודי', geno: 'DD', loc: 'meadow', fact: 'DD', tagHe: 'טהור' },
     ],
     orders: [
-      { id: 'both', titleHe: 'גנומי עם פסים וגם נקודות', req: { kind: 'phenotype', pheno: { pattern: 'both' } }, icon: { pattern: 'both' } },
+      { id: 'both', titleHe: 'פופי עם פסים וגם נקודות', req: { kind: 'phenotype', pheno: { pattern: 'both' } }, icon: { pattern: 'both' } },
       {
         id: 'family',
-        titleHe: 'תמונה משפחתית: פסים, נקודות ושניהם — אחים מאותם הורים',
+        titleHe: 'תמונה משפחתית: אחים עם פסים, נקודות ושניהם — מאותם הורים',
         req: { kind: 'family', gene: 'pattern', phenos: ['stripes', 'both', 'spots'] },
         icon: { pattern: 'both' },
       },
@@ -173,7 +174,7 @@ export const DAYS: DayDef[] = [
       'פסים × נקודות נותן רק "פסים וגם נקודות" (FˢFᴰ). זה לא ערבוב — שני הדפוסים מופיעים.',
       'לתמונה המשפחתית: הכליאו שני גורים FˢFᴰ זה עם זה. היחס הצפוי 1:2:1 — פסים : שניהם : נקודות.',
     ],
-    takeawayHe: 'בקודומיננטיות כל גנוטיפ נראה אחרת, ולכן FˢFᴰ × FˢFᴰ נותן 1:2:1 בפנוטיפ — לא 3:1.',
+    takeawayHe: 'בקודומיננטיות שני האללים מתבטאים יחד (FˢFᴰ = פסים וגם נקודות), ולכן FˢFᴰ × FˢFᴰ נותן 1:2:1 בפנוטיפ — לא 3:1.',
   },
   {
     id: 'd5-two-traits',
@@ -195,7 +196,7 @@ export const DAYS: DayDef[] = [
     ],
     orders: [
       { id: 'floppy-blue', titleHe: 'שמוט וגם כחול', req: { kind: 'phenotype', pheno: { ears: 'floppy', color: 'blue' } }, icon: { ears: 'floppy', color: 'blue' } },
-      { id: 'violet', titleHe: 'גנומי סגול', req: { kind: 'phenotype', pheno: { color: 'violet' } }, icon: { color: 'violet' } },
+      { id: 'violet', titleHe: 'פופי סגול', req: { kind: 'phenotype', pheno: { color: 'violet' } }, icon: { color: 'violet' } },
       {
         id: 'violet-kid',
         titleHe: 'גור כחול להורה סגול',
@@ -205,7 +206,7 @@ export const DAYS: DayDef[] = [
     ],
     hintsHe: [
       'שמוט וגם כחול: חפשו זוג שבו לכל תכונה יש סיכוי גבוה. ½ × ½ = ¼ עדיף על ¼ × ½ = ⅛.',
-      'סגול = pp שגדל בקן הקר. הקור משנה את הפנוטיפ, לא את הגנוטיפ — הגורים של סגול בקן חם יהיו כחולים.',
+      'סגול = pp שגדל בקן הקר. הקור משנה את הפנוטיפ, לא את הגנוטיפ: סגול (pp) עם בן זוג pp בקן החם ייתן גורים כחולים.',
     ],
     takeawayHe: 'גנים נפרדים עוברים בנפרד (מכפילים הסתברויות), והסביבה משנה פנוטיפ בלי לשנות גנוטיפ.',
   },
@@ -213,7 +214,7 @@ export const DAYS: DayDef[] = [
     id: 'd6-the-show',
     num: 6,
     titleHe: 'התערוכה',
-    introHe: 'אי התערוכה: תכונות חדשות, בלי רמזים ובלי עדשת פאנט. קראו את לוח השושלת ומלאו שלוש הזמנות.',
+    introHe: 'אי התערוכה: תכונות חדשות, בלי רמזים ובלי עדשת פאנט. בתערוכה מציגים רק גורים שבקעו כאן — קראו את לוח השושלת ומלאו שלוש הזמנות.',
     genes: ['tail', 'glow'],
     eggs: 10,
     hints: false,
@@ -227,12 +228,12 @@ export const DAYS: DayDef[] = [
       { key: 'tachav', name: 'טחב', geno: 'cc gg', loc: 'meadow', pretty: 1 },
       { key: 'chaluk', name: 'חלוק', geno: 'Cc gg', loc: 'meadow', pretty: 2 },
       // Pedigree parents (on the board only).
-      { key: 'nitzotz-m', name: 'אמא של ניצוץ', geno: 'cc gg', loc: 'away' },
-      { key: 'nitzotz-f', name: 'אבא של ניצוץ', geno: 'CC GG', loc: 'away' },
-      { key: 'shavit-m', name: 'אמא של שביט', geno: 'Cc Gg', loc: 'away' },
-      { key: 'shavit-f', name: 'אבא של שביט', geno: 'CC Gg', loc: 'away' },
-      { key: 'chaluk-m', name: 'אמא של חלוק', geno: 'CC gg', loc: 'away' },
-      { key: 'chaluk-f', name: 'אבא של חלוק', geno: 'cc gg', loc: 'away' },
+      { key: 'nitzotz-m', name: 'אמא של ניצוץ', geno: 'cc gg', loc: 'away', sex: 'f' },
+      { key: 'nitzotz-f', name: 'אבא של ניצוץ', geno: 'CC GG', loc: 'away', sex: 'm' },
+      { key: 'shavit-m', name: 'אמא של שביט', geno: 'Cc Gg', loc: 'away', sex: 'f' },
+      { key: 'shavit-f', name: 'אבא של שביט', geno: 'CC Gg', loc: 'away', sex: 'm' },
+      { key: 'chaluk-m', name: 'אמא של חלוק', geno: 'CC gg', loc: 'away', sex: 'f' },
+      { key: 'chaluk-f', name: 'אבא של חלוק', geno: 'cc gg', loc: 'away', sex: 'm' },
     ],
     pedigree: {
       parents: {
@@ -240,19 +241,19 @@ export const DAYS: DayDef[] = [
         shavit: ['shavit-m', 'shavit-f'],
         chaluk: ['chaluk-m', 'chaluk-f'],
       },
-      noteHe: 'רק גנום אחד מכל 20 באי זוהר — ובכל זאת "זוהר" הוא האלל השולט (G).',
+      noteHe: 'G (זוהר) שולט — אבל שולט לא אומר נפוץ: באי רוב הפופים בלי מחוש (gg). אלה כאן הגיעו לתערוכה בזכות המחוש.',
     },
     orders: [
-      { id: 'straight', titleHe: 'זנב ישר', req: { kind: 'phenotype', pheno: { tail: 'straight' } }, icon: { tail: 'straight' } },
-      { id: 'glow', titleHe: 'מחוש זוהר', req: { kind: 'phenotype', pheno: { glow: 'glow' } }, icon: { glow: 'glow' } },
+      { id: 'straight', titleHe: 'זנב ישר', req: { kind: 'phenotype', pheno: { tail: 'straight' }, bredOnly: true }, icon: { tail: 'straight' } },
+      { id: 'glow', titleHe: 'מחוש זוהר', req: { kind: 'phenotype', pheno: { glow: 'glow' }, bredOnly: true }, icon: { glow: 'glow' } },
       {
         id: 'glow-straight',
         titleHe: 'זוהר וגם זנב ישר',
-        req: { kind: 'phenotype', pheno: { glow: 'glow', tail: 'straight' } },
+        req: { kind: 'phenotype', pheno: { glow: 'glow', tail: 'straight' }, bredOnly: true },
         icon: { glow: 'glow', tail: 'straight' },
       },
     ],
     hintsHe: [],
-    takeawayHe: 'קראתם שושלת, הסקתם גנוטיפים ובחרתם הכלאות — בלי רמזים. זו גנטיקה אמיתית!',
+    takeawayHe: 'מילאתם את התערוכה בלי רמזים ובלי עדשה. הזוג החכם: ניצוץ (Cc Gg, לפי אמו הישרה וחסרת המחוש) × טחב (cc gg) — כל ביצה: ½ ישר, ½ זוהר, ¼ שניהם.',
   },
 ];

@@ -110,6 +110,19 @@ describe('Day 2 — The Hidden Carrier', () => {
   it('a test-cross strategy finds the carrier within 10 eggs', () => {
     expect(rate((s) => smart(s).phase === 'won')).toBeGreaterThan(0.85);
   });
+  it("babies don't count: an upright baby of Pip is a proven Ee, but the order wants a wild candidate", () => {
+    const g = new Game(1, 3);
+    catchAll(g);
+    setNest(g, 'tofi', 'pip');
+    let up: string | null = null;
+    for (let i = 0; i < 6 && !up; i++) {
+      const k = hatchOnce(g);
+      if (k && g.pheno(k).ears === 'upright') up = k;
+    }
+    expect(up).not.toBeNull();
+    expect(knownKey(g, up!, 'ears')).toBe('Ee');
+    expect(g.canDeliver('carrier', up!)).toBe(false);
+  });
   it('a floppy baby fills the carrier card (Ee) — proof, not a guess', () => {
     for (let s = 1; s < 50; s++) {
       const g = smart(s);
@@ -206,15 +219,14 @@ describe('Day 4 — Stripes AND Spots', () => {
   it('stripes × spots always gives both patterns; the 1:2:1 family fits in 14 eggs', () => {
     expect(rate((s) => smart(s).phase === 'won')).toBeGreaterThan(0.85);
   });
-  it('family photo rejects non-siblings', () => {
+  it('family photo only starts with parents that can give all three patterns', () => {
     const g = new Game(3, 1);
     catchAll(g);
     setNest(g, 'zebra', 'nekudi');
     const a = hatchOnce(g)!;
-    expect(g.canDeliver('family', a)).toBe(true);
-    g.deliver('family', a);
-    // Wild Zebra has no parents on the ranch: not a sibling.
-    g.unplace(0);
+    expect(g.pheno(a).pattern).toBe('both');
+    // FˢFˢ × FᴰFᴰ can only ever give "both": starting the family photo here would be a dead end.
+    expect(g.canDeliver('family', a)).toBe(false);
     expect(g.canDeliver('family', 'zebra')).toBe(false);
   });
 });
@@ -341,6 +353,47 @@ describe('Day 6 — Transfer: The Show (no hints, no lens)', () => {
     expect(DAYS[5].pedigree!.noteHe).toContain('G');
     const wild = g.list('meadow');
     expect(wild.filter((c) => g.pheno(c.id).glow === 'glow').length).toBeLessThan(wild.length);
+  });
+});
+
+describe('science-review regressions', () => {
+  it('a wrong pure pair does not name the carrier', () => {
+    for (let s = 1; s <= 40; s++) {
+      const g = new Game(2, s);
+      catchAll(g);
+      g.deliver('pure-pink', 'varda');
+      g.deliver('pure-pink', 'sukaria');
+      const ev = g.drainEvents().find((e) => e.type === 'wrongDelivery');
+      if (ev && ev.type === 'wrongDelivery') for (const n of ['ורדה', 'סוכריה', 'פטל']) expect(ev.explainHe).not.toContain(n);
+    }
+  });
+  it('a known carrier (card shows Pp) is never offered for the pure line', () => {
+    const g = new Game(2, 4);
+    catchAll(g);
+    const pp = ['varda', 'sukaria', 'petel'].find((c) => g.get(c).genotype.color.join('') === 'Pp')!;
+    setNest(g, pp, 'kachli');
+    for (let i = 0; i < 12 && knownKey(g, pp, 'color') !== 'Pp'; i++) hatchOnce(g);
+    expect(knownKey(g, pp, 'color')).toBe('Pp');
+    expect(g.eligible(g.orders[0], pp)).toBe(false);
+  });
+  it('out-of-eggs separates impossible pairs from bad luck', () => {
+    const g = new Game(4, 2);
+    setNest(g, 'nasich', 'agas');
+    const all: ReturnType<Game['drainEvents']> = [];
+    while (g.eggs > 0 && g.hatchEgg()) {
+      g.tick(HATCH_MS);
+      all.push(...g.drainEvents());
+    }
+    const out = all.find((e) => e.type === 'outOfEggs');
+    expect(g.phase).toBe('outOfEggs');
+    expect(out && out.type === 'outOfEggs' && out.explainHe).toContain('0%');
+    expect(out && out.type === 'outOfEggs' && out.explainHe).not.toContain('מזל רע');
+  });
+  it('the show only accepts babies bred on the island', () => {
+    const g = new Game(5, 1);
+    catchAll(g);
+    expect(g.canDeliver('straight', 'tachav')).toBe(false);
+    expect(g.canDeliver('glow', 'shavit')).toBe(false);
   });
 });
 

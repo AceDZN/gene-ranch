@@ -1055,3 +1055,9 @@ button {
     top: 160px;
   }
 }
+.log.closed {
+  display: none;
+}
+.rbtn.ped {
+  background: #6b4fb0;
+}

@@ -33,6 +33,8 @@ export interface HatchEntry {
   child: string;
   pheno: Phenotype;
   env: Env;
+  /** Chance range (from what was KNOWN at the time) that this egg would fill the first open phenotype order. */
+  odds?: [number, number] | null;
   /** Punnett cell (row = nest slot 0 parent's allele, col = slot 1 parent's) per gene. */
   cell: Record<GeneId, [0 | 1, 0 | 1]>;
 }
@@ -122,7 +124,7 @@ export class Game {
       name: s.name,
       genotype: geno(s.geno),
       env: s.env ?? 'warm',
-      sex: this.rng.coin() ? 'f' : 'm',
+      sex: s.sex ?? (this.rng.coin() ? 'f' : 'm'),
       origin: s.loc === 'away' ? 'pedigree' : s.loc === 'belt' ? 'ranch' : 'wild',
       loc: s.loc,
       tagHe: s.tagHe,
@@ -221,19 +223,28 @@ export class Game {
     const req = o.def.req;
     switch (req.kind) {
       case 'phenotype':
-        return matchesPheno(p, req.pheno);
+        return matchesPheno(p, req.pheno) && (!req.bredOnly || c.origin === 'baby');
       case 'carrier': {
         // The village only takes a PROVEN carrier: the card must already show it is heterozygous.
         const dom = GENES[req.gene].phenotype([GENES[req.gene].alleles[0], GENES[req.gene].alleles[1]], c.env);
         const k = this.known(id, req.gene);
+        if (req.wildOnly && c.origin !== 'wild') return false;
         return p[req.gene] === dom && (!this.day.autoDeduce || (k.length === 1 && k[0][0] !== k[0][1]));
       }
-      case 'purePair':
-        return p[req.gene] === req.pheno;
+      case 'purePair': {
+        // A creature whose card already shows it is heterozygous can't be part of a pure line.
+        const k = this.known(id, req.gene);
+        return p[req.gene] === req.pheno && !(k.length === 1 && k[0][0] !== k[0][1]);
+      }
       case 'family': {
         const have = o.delivered.map((d) => this.pheno(d)[req.gene]);
         if (!req.phenos.includes(p[req.gene]) || have.includes(p[req.gene]) || !c.parents) return false;
-        if (o.delivered.length === 0) return true;
+        if (o.delivered.length === 0) {
+          // Start a family only with parents that can (as far as anyone knows) give every pattern.
+          const [pa, pb] = c.parents;
+          const odds = lensOdds(req.gene, this.known(pa, req.gene), this.known(pb, req.gene));
+          return req.phenos.every((ph) => (odds.get(ph)?.[1] ?? 0) > 0);
+        }
         const first = this.get(o.delivered[0]).parents!;
         return [...first].sort().join('|') === [...c.parents].sort().join('|');
       }
@@ -241,10 +252,18 @@ export class Game {
         return matchesPheno(p, req.pheno) && !!c.parents && c.parents.some((pid) => matchesPheno(this.pheno(pid), req.parentPheno));
     }
   }
-  /** A creature that can fill this order right now: the selected one first, then belt, then nest. */
+  /** A creature that can fill this order right now: the selected one first, then belt, then nest.
+   * Orders that hinge on a hidden genotype (pure pair) only ever offer the creature the player picked. */
   deliverable(orderId: string): string | null {
+    const o = this.orders.find((x) => x.def.id === orderId);
+    if (o?.def.req.kind === 'purePair') return this.selected && this.canDeliver(orderId, this.selected) ? this.selected : null;
     const ids = [this.selected, ...this.belt, ...this.nest].filter((x): x is string => !!x);
     return ids.find((id) => this.canDeliver(orderId, id)) ?? null;
+  }
+  /** Visible fit worth celebrating (not for orders whose success depends on a hidden genotype). */
+  fits(orderId: string, id: string): boolean {
+    const o = this.orders.find((x) => x.def.id === orderId);
+    return !!o && o.def.req.kind !== 'purePair' && this.canDeliver(orderId, id);
   }
   allFilled(): boolean {
     return this.orders.every((o) => o.filled);
@@ -335,7 +354,8 @@ export class Game {
     };
     this.eggs--;
     this.eggsUsed++;
-    const entry: HatchEntry = { parents: [A.id, B.id], child: child.id, pheno: phenotypeOf(child.genotype, child.env), env: child.env, cell: r.pick };
+    const open = this.orders.find((o) => !o.filled && (o.def.req.kind === 'phenotype' || o.def.req.kind === 'parentPheno'));
+    const entry: HatchEntry = { parents: [A.id, B.id], child: child.id, pheno: phenotypeOf(child.genotype, child.env), env: child.env, cell: r.pick, odds: open ? this.orderOdds(open) : null };
     this.hatch = { t: 0, child, entry };
     this.phase = 'hatching';
     this.emit({ type: 'hatchStart', child: child.id, cell: r.pick });
@@ -372,7 +392,7 @@ export class Game {
     this.recompute();
     // A full belt makes room: the oldest baby that fits no open order hops out to the meadow.
     if (this.belt.length >= BELT_MAX) {
-      const spare = this.belt.find((id) => this.get(id).origin === 'baby' && !this.orders.some((o) => !o.filled && this.eligible(o, id)));
+      const spare = this.belt.find((id) => this.get(id).origin === 'baby' && !this.orders.some((o) => !o.filled && o.def.req.kind !== 'purePair' && this.eligible(o, id)));
       if (spare) {
         this.belt = this.belt.filter((x) => x !== spare);
         this.get(spare).loc = 'meadow';
@@ -386,7 +406,7 @@ export class Game {
     if (toBelt) this.selected = child.id;
     this.phase = 'play';
     this.recompute();
-    const matches = this.orders.filter((o) => this.canDeliver(o.def.id, child.id)).map((o) => o.def.id);
+    const matches = this.orders.filter((o) => this.fits(o.def.id, child.id)).map((o) => o.def.id);
     this.emit({ type: 'hatched', id: child.id, toBelt, matches });
     this.logL('hatch', `${entry.parents.join('×')}→${Object.values(entry.pheno).join('/')}`, matches.length ? 'match' : 'no-match');
     this.checkEggs();
@@ -424,17 +444,20 @@ export class Game {
     return ok.length > 0;
   }
 
+  /** Out-of-eggs explanation that separates impossible pairs from genuine bad luck. */
   private explainLuck(): string {
-    const open = this.orders.find((o) => !o.filled);
-    if (!open) return '';
-    const r = this.orderOdds(open);
-    const n = this.eggsUsed;
-    if (r && r[1] === 0) return 'עם ההורים שבקן הסיכוי היה 0% — אף תא בריבוע לא נותן את מה שהוזמן. נסו זוג אחר.';
-    if (r && r[0] > 0 && r[0] === r[1]) {
-      const miss = Math.pow(1 - r[0], n);
-      return `לכל ביצה היה סיכוי של ${pct(r[0])}. ${n} ביצות בלי הצלחה קורות בערך ב־${pct(miss)} מהפעמים — מזל רע, לא טעות. כל ביצה היא הגרלה חדשה.`;
+    const eggs = this.hatchLog;
+    const zero = eggs.filter((e) => e.odds && e.odds[1] === 0).length;
+    const exact = eggs.filter((e) => e.odds && e.odds[0] === e.odds[1] && e.odds[0] > 0);
+    const parts: string[] = [];
+    if (zero) parts.push(`${zero} מהביצים היו מזוג שלא יכול לתת את מה שהוזמן (0% — אף תא בריבוע לא מתאים).`);
+    if (exact.length) {
+      const miss = exact.reduce((m, e) => m * (1 - e.odds![0]), 1);
+      const ps = [...new Set(exact.map((e) => pct(e.odds![0])))].join(' / ');
+      parts.push(`ב־${exact.length} ביצים היה סיכוי של ${ps} לכל ביצה. שכולן ייצאו בלי הצלחה — זה קורה בערך ב־${pct(miss)} מהפעמים${miss < 0.2 ? ': מזל רע.' : '.'}`);
     }
-    return 'כל ביצה היא הגרלה חדשה: ריבוע פאנט אומר מה הסיכוי, לא מה יקרה בפועל.';
+    parts.push('כל ביצה היא הגרלה חדשה: ריבוע פאנט אומר מה הסיכוי, לא מה יקרה בפועל.');
+    return parts.join(' ');
   }
 
   deliver(orderId: string, id: string): boolean {
@@ -449,12 +472,11 @@ export class Game {
     const certain = this.isCertainFor(o, id);
     if (req.kind === 'carrier' && isHomozygous(c.genotype[req.gene])) {
       this.mistakes++;
-      const dom = GENES[req.gene].alleles[0];
       this.emit({
         type: 'wrongDelivery',
         id,
         order: orderId,
-        explainHe: `הכפר הכליא את ${c.name} עם שמוט 6 פעמים — כל הגורים זקופים. ${c.name} הוא ${dom}${dom}, לא נשא. בלי גור שמוט אין הוכחה.`,
+        explainHe: `הכפר בדק את ${c.name} בהכלאת מבחן — ולא קיבל אף גור שמוט. בלי גור שמוט אין הוכחה שהוא נשא.`,
       });
       this.logL('deliver', `${orderId}:${c.name}`, certain ? 'wrong-certain?' : 'wrong-guess', hinted);
       return false;
@@ -487,7 +509,7 @@ export class Game {
             type: 'wrongDelivery',
             id,
             order: orderId,
-            explainHe: `הכפר גידל את הזוג: הגורים ורודים... אבל בדור הנכדים בקע גור כחול! ${bad.map((b) => b.name).join(' ו')} ${bad.length > 1 ? 'היו נשאים' : 'היה נשא'} (${dom}${rec}) והעביר את ${rec} הלאה.${cost ? ` הבדיקה של הכפר עלתה ${cost} ביצים.` : ''}`,
+            explainHe: `הכפר גידל את הזוג במשך כמה דורות — ובין הנכדים הופיע פופי כחול (pp)! כלומר לפחות אחד מהשניים היה נשא (${dom}${rec}) והעביר את ${rec} הלאה.${cost ? ` הבדיקה של הכפר עלתה ${cost} ביצים.` : ''}`,
           });
           this.checkEggs();
           this.logL('deliver', `${orderId}`, certain ? 'wrong' : 'wrong-guess', hinted);
@@ -520,8 +542,15 @@ export class Game {
     const c = this.creatures.get(id);
     if (!c) return '';
     if (o.def.req.kind === 'family' && !c.parents) return 'בתמונה המשפחתית רק גורים שבקעו כאן.';
+    if (o.def.req.kind === 'family' && o.delivered.length === 0 && c.parents)
+      return 'ההורים של ' + c.name + ' לא יכולים לתת את כל שלוש הדוגמאות. צריך אחים שההורים שלהם הם FˢFᴰ × FˢFᴰ.';
     if (o.def.req.kind === 'family') return 'צריך אחים מאותם הורים, עם דוגמה שעוד חסרה בתמונה.';
+    if (o.def.req.kind === 'phenotype' && o.def.req.bredOnly && c.origin !== 'baby') return 'בתערוכה מציגים רק גורים שבקעו כאן באי.';
     if (o.def.req.kind === 'parentPheno') return 'צריך גור כחול שאחד מההורים שלו סגול.';
+    if (o.def.req.kind === 'carrier' && o.def.req.wildOnly && c.origin !== 'wild') {
+      const names = [...this.creatures.values()].filter((x) => x.origin === 'wild').map((x) => x.name).join(', ');
+      return `הכפר מחפש את הנשא מבין הזקופים מהאחו: ${names}.`;
+    }
     if (o.def.req.kind === 'carrier') return `עוד אין הוכחה ש${c.name} נשא. הכפר רוצה לראות גור שמוט שלו.`;
     return 'זה לא מה שהוזמן — הסתכלו בתמונה שעל ההזמנה.';
   }

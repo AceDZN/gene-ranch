@@ -8,9 +8,9 @@ export const SPAWN = new THREE.Vector3(0, 1.6, 7.6);
 export const SPAWN_LOOK = new THREE.Vector3(-0.2, 0.75, 2.0);
 export const NEST_POS = new THREE.Vector3(0.9, 0, 2.3);
 // Slot 0 is the LEFT parent (its alleles label the Punnett rows on the left), slot 1 the right one.
-export const NEST_SLOTS = [new THREE.Vector3(0.32, 0.42, 2.4), new THREE.Vector3(1.48, 0.42, 2.4)];
+export const NEST_SLOTS = [new THREE.Vector3(0.36, 0.56, 2.35), new THREE.Vector3(1.44, 0.56, 2.35)];
 /** Eggs land and hatch in the middle of the nest, between the parents. */
-export const HATCH_SPOT = new THREE.Vector3(0.9, 0.52, 2.75);
+export const HATCH_SPOT = new THREE.Vector3(0.9, 0.58, 2.7);
 export const BOARD_POS = new THREE.Vector3(-4.6, 0, 1.2);
 export const VILLAGER_POS = new THREE.Vector3(-3.4, 0, 2.0);
 export const BARN_POS = new THREE.Vector3(5.5, 0, -5.5);
@@ -525,7 +525,10 @@ export class World {
       stone.position.y = 0.17;
       const moss = new THREE.Mesh(new THREE.CylinderGeometry(1.27, 1.27, 0.06, 28), new THREE.MeshStandardMaterial({ color: '#86c96f', roughness: 1 }));
       moss.position.y = 0.35;
-      this.nest.add(stone, moss, model);
+      // A straw bed inside the ring (the model's own interior renders dark).
+      const bed = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.12, 28), new THREE.MeshStandardMaterial({ color: '#e7c374', roughness: 1 }));
+      bed.position.y = 0.52;
+      this.nest.add(stone, moss, model, bed);
     }
     else {
       const stone = new THREE.Mesh(new THREE.CylinderGeometry(1.45, 1.6, 0.3, 24), new THREE.MeshStandardMaterial({ color: '#a8a0b8', roughness: 0.9 }));
