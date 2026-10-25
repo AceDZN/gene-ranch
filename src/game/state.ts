@@ -41,7 +41,7 @@ export interface HatchEntry {
 
 export type GameEvent =
   | { type: 'caught'; id: string }
-  | { type: 'released'; id: string }
+  | { type: 'released'; id: string; auto?: boolean }
   | { type: 'placed'; id: string; slot: 0 | 1 }
   | { type: 'unplaced'; id: string }
   | { type: 'hatchStart'; child: string; cell: Record<GeneId, [0 | 1, 0 | 1]> }
@@ -334,6 +334,11 @@ export class Game {
     return true;
   }
 
+  /** Skip ahead to the crack (the player tapped the egg button again during a hatch). */
+  fastForward() {
+    if (this.hatch) this.hatch.t = Math.max(this.hatch.t, HATCH_MS - 250);
+  }
+
   setNestTemp(t: Env) {
     if (!this.day.coldNest || this.phase !== 'play') return;
     this.nestTemp = t;
@@ -400,7 +405,7 @@ export class Game {
         this.belt = this.belt.filter((x) => x !== spare);
         this.get(spare).loc = 'meadow';
         if (this.selected === spare) this.selected = null;
-        this.emit({ type: 'released', id: spare });
+        this.emit({ type: 'released', id: spare, auto: true });
       }
     }
     const toBelt = this.belt.length < BELT_MAX;

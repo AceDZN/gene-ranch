@@ -33,8 +33,8 @@ export class Player {
   }
 
   look(dx: number, dy: number) {
-    this.yaw -= dx * 0.0042;
-    this.pitch = THREE.MathUtils.clamp(this.pitch - dy * 0.0036, -1.1, 0.75);
+    this.yaw -= dx * 0.003;
+    this.pitch = THREE.MathUtils.clamp(this.pitch - dy * 0.0026, -1.1, 0.75);
   }
 
   goTo(p: THREE.Vector3) {

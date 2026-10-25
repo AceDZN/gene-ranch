@@ -149,7 +149,7 @@ export class App {
       place: (id) => this.act(() => this.game.place(id)),
       release: (id) => this.act(() => this.game.release(id)),
       deliver: (o, id) => this.act(() => this.game.deliver(o, id)),
-      hatch: () => this.act(() => this.game.hatchEgg()),
+      hatch: () => this.act(() => (this.game.phase === 'hatching' ? this.game.fastForward() : this.game.hatchEgg())),
       temp: (t) => this.act(() => this.game.setNestTemp(t)),
       hint: () => this.showHint(),
       pause: () => this.showPause(),
@@ -176,6 +176,7 @@ export class App {
     const seed = this.seedParam ?? Math.floor(Math.random() * 2 ** 31);
     this.game = new Game(i, seed + (this.attempt - 1) * 7919, this.attempt);
     this.timers = [];
+    this.hud.hatchInfo = null;
     for (const c of this.views.values()) (c.view.dispose(), c.tag.removeFromParent());
     this.views.clear();
     this.world.setPalette(this.game.day.island);
@@ -259,6 +260,7 @@ export class App {
           break;
         }
         case 'released': {
+          if (e.auto) this.hud.toast(`הכיס מלא — ${g.get(e.id).name} קפץ לאחו כדי לפנות מקום לגור החדש.`);
           const c = this.ensureView(e.id);
           // Hop off to a free spot in the meadow, away from the player and the nest.
           let to = MEADOW_CENTER.clone();
@@ -347,7 +349,7 @@ export class App {
           this.later(1600, () => this.showFail(e.explainHe));
           break;
         case 'won':
-          this.later(1700, () => this.showWin());
+          this.later(1000, () => this.showWin());
           break;
         case 'beltFull':
           this.hud.toast('הכיס מלא (6). בחרו פופי ולחצו "שחרור" כדי לפנות מקום.');
@@ -417,6 +419,11 @@ export class App {
     this.world.frost.visible = g.nestTemp === 'cold';
     this.updateViews(dt);
     this.updateHatch(dt);
+    // Keep the hatch in view: if the nest is off-screen while an egg hatches, turn toward it.
+    if (g.phase === 'hatching') {
+      const p = NEST_POS.clone().setY(1).project(this.camera);
+      if (p.z > 1 || Math.abs(p.x) > 0.85) this.player.faceToward(NEST_POS, Math.min(1, dt * 3));
+    }
     this.updateLens(dt);
     this.egg.update(dt);
     this.sparkles.update(dt);
@@ -907,7 +914,7 @@ export class App {
     const wants = g.orders.map((o) => `<div><img src="${portraitURL(o.def.icon, 128)}" alt="">${o.def.titleHe}</div>`).join('');
     const how =
       g.day.num === 1
-        ? `<div class="how"><span>👆 לחצו על פופי — שואבים</span><span>🪺 לחצו על הקן — מושיבים</span><span>🥚 ביצה — בוקעים</span><span>📦 מסרו להזמנה</span></div><p style="font-size:14px;opacity:.8">גוררים כדי להסתכל מסביב · WASD כדי ללכת (לא חובה)</p>`
+        ? `<div class="how"><span>👆 לחצו על פופי — שואבים</span><span>🪺 לחצו על הקן — מושיבים</span><span>🥚 ביצה — בוקעים</span><span>📦 מסרו להזמנה</span></div><p style="font-size:14px;opacity:.8">${matchMedia('(pointer: coarse)').matches ? 'גוררים באצבע כדי להסתכל מסביב' : 'גוררים כדי להסתכל מסביב · WASD כדי ללכת (לא חובה)'}</p>`
         : '';
     this.hudEl.hidden = false;
     this.showModal(
@@ -919,7 +926,8 @@ export class App {
   }
 
   private showExplain(title: string, text: string, btn: string) {
-    this.showModal('explain', `<h2>${title}</h2><p>${text}</p><button class="big" data-o="ok">${btn}</button>`, { ok: () => this.closeOverlay() });
+    const extra = title === '💡 רמז' ? '<p style="font-size:14px;opacity:.75">(רמז מוריד את הכוכב השלישי של היום)</p>' : '';
+    this.showModal('explain', `<h2>${title}</h2><p>${text}</p>${extra}<button class="big" data-o="ok">${btn}</button>`, { ok: () => this.closeOverlay() });
   }
 
   private showHint() {

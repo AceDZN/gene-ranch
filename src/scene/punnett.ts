@@ -109,8 +109,8 @@ class SquareView {
     ctx.fillStyle = fg;
     ctx.fill();
     // Name pills: column parent on top, row parent at the left.
-    const pill = (txt: string, x: number, y: number, muted: boolean) => {
-      ctx.font = '700 42px Rubik, sans-serif';
+    const pill = (txt: string, x: number, y: number, muted: boolean, size = 50) => {
+      ctx.font = `700 ${size}px Rubik, sans-serif`;
       const w = ctx.measureText(txt).width + 50;
       rr(ctx, x - w / 2, y - 32, w, 64, 32);
       ctx.fillStyle = muted ? 'rgba(255,255,255,0.55)' : 'rgba(255,248,236,0.95)';
@@ -120,7 +120,7 @@ class SquareView {
     };
     pill(sq.B ? sq.B.name : 'הורה שני?', X_COL[0] + CELL, 52, !sq.B);
     pill(sq.A ? sq.A.name : 'הורה?', ROW_COIN_X, Y_ROW[0] - 70, !sq.A);
-    pill(def.nameHe, W - 120, 52, false);
+    pill('ריבוע פאנט · ' + def.nameHe, 250, 52, false, 38);
     // Allele coins.
     const coin = (x: number, y: number, txt: string) => {
       const unknown = txt === '?';
