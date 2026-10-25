@@ -8,15 +8,15 @@ Three.js + Vite + TypeScript, Hebrew RTL UI (bundled Rubik font), Tripo-generate
 
 ```bash
 npm install
-npm run dev        # http://127.0.0.1:5201 (strictPort)
+npm run dev        # http://127.0.0.1:5221 (strictPort)
 npm test           # vitest: genetics distributions + every day's solvability
 npm run build      # static bundle in dist/ (relative base, works from any sub-path)
-npm run preview    # http://127.0.0.1:4201
+npm run preview    # http://127.0.0.1:4221
 ```
 
 Useful URL parameters: `?day=3` (start on a day), `&skipintro=1`, `&seed=42` (deterministic eggs).
 
-Note (Oct 2026): another local project was occupying 5201/4201 during development, so this build was tested on 5221 (dev) and 4221 (preview); `.claude/launch.json` has both configs.
+Ports: dev 5221, preview 4221 (strictPort; moved from the originally planned 5201/4201, which another local project uses). `.claude/launch.json` has both.
 
 ## Controls
 

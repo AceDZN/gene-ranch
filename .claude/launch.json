@@ -1,7 +1,7 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "gene-ranch", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 5201 },
-    { "name": "gene-ranch-alt", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--host", "127.0.0.1", "--port", "5221", "--strictPort"], "port": 5221 }
+    { "name": "gene-ranch", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 5221 },
+    { "name": "gene-ranch-preview", "runtimeExecutable": "npm", "runtimeArgs": ["run", "preview"], "port": 4221 }
   ]
 }

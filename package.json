@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Gene Ranch — חוות הגנים: a first-person 3D creature ranch where every trait follows real Mendelian genetics (Hebrew, grade 9 science).",
   "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 5201 --strictPort",
+    "dev": "vite --host 127.0.0.1 --port 5221 --strictPort",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 4201 --strictPort",
+    "preview": "vite preview --host 127.0.0.1 --port 4221 --strictPort",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

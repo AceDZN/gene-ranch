@@ -18,6 +18,6 @@
 - Final build: all six days won through real clicks at 1280×800 and Day 1 at 390×844 in one run, no console errors; 45 unit tests pass. VISUAL_REVIEW.md, PLAYTEST.md, screenshots committed.
 
 ## Open / next
-- Port 5201/4201 still held by goblin-kitchen (not ours) at the end of the session; dev server left running on 5221.
+- Ports are now permanently 5221 (dev) / 4221 (preview), confirmed by the lead session; 5201/4201 belong to goblin-kitchen.
 - Real-GPU FPS and real-phone testing not done.
 - Ideas: fur shader, nest interior, island unlock map, carrying a ranch between days.
