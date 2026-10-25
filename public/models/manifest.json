@@ -1,0 +1,8 @@
+{
+  "gnoomie": { "file": "gnoomie.glb", "headBone": "mixamorigHead", "roles": { "idle": "idle", "hop": "walk", "happy": "cheer" } },
+  "villager": { "file": "villager.glb", "roles": { "idle": "idle", "happy": "cheer", "sad": "frustrated_01" } },
+  "barn": { "file": "barn.glb" },
+  "nest": { "file": "nest.glb" },
+  "netgun": { "file": "netgun.glb" },
+  "board": { "file": "board.glb" }
+}
