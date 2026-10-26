@@ -97,6 +97,8 @@ export class App {
   private attempt = 1;
   private actionsDone = { caught: false, placed: false, hatched: false, delivered: false };
   private fps = { frames: 0, t: 0, value: 0 };
+  private lastAction = 0;
+  private seats: THREE.Mesh[] = [];
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -129,8 +131,30 @@ export class App {
     ring.position.y = 0.3;
     ring.rotation.x = Math.PI / 2;
     this.arrow.add(cone, ring);
+    this.arrow.scale.setScalar(0.6);
     this.arrow.visible = false;
     this.scene.add(this.arrow);
+    // Empty nest seats: a glowing dashed ring with a plus.
+    const sc0 = document.createElement('canvas');
+    sc0.width = sc0.height = 128;
+    const s0 = sc0.getContext('2d')!;
+    s0.strokeStyle = '#fff7b0';
+    s0.lineWidth = 9;
+    s0.setLineDash([16, 12]);
+    s0.beginPath();
+    s0.arc(64, 64, 52, 0, Math.PI * 2);
+    s0.stroke();
+    s0.setLineDash([]);
+    s0.fillStyle = '#fff7b0';
+    s0.fillRect(58, 36, 12, 56);
+    s0.fillRect(36, 58, 56, 12);
+    const seatTex = new THREE.CanvasTexture(sc0);
+    for (const p of NEST_SLOTS) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: seatTex, transparent: true, depthWrite: false }));
+      m.position.copy(p).add(new THREE.Vector3(0, 0.35, 0));
+      this.scene.add(m);
+      this.seats.push(m);
+    }
     // Villager sweat-drop.
     const sc = document.createElement('canvas');
     sc.width = sc.height = 128;
@@ -145,7 +169,18 @@ export class App {
     this.scene.add(this.sweat);
 
     this.hud = new Hud(hudEl, {
-      select: (id) => this.act(() => this.game.select(id)),
+      // One tap: a Poofie in the belt hops into a free nest seat; otherwise it's just selected.
+      select: (id) => this.act(() => {
+        const g = this.game;
+        if (g.get(id).loc === 'belt' && g.phase === 'play' && (!g.nest[0] || !g.nest[1])) g.place(id);
+        else g.select(id);
+        this.lastAction = this.time;
+      }),
+      unplace: (id) => this.act(() => {
+        const g = this.game;
+        g.unplace(g.nest[0] === id ? 0 : 1);
+        this.lastAction = this.time;
+      }),
       place: (id) => this.act(() => this.game.place(id)),
       release: (id) => this.act(() => this.game.release(id)),
       deliver: (o, id) => this.act(() => this.game.deliver(o, id)),
@@ -177,6 +212,7 @@ export class App {
     this.game = new Game(i, seed + (this.attempt - 1) * 7919, this.attempt);
     this.timers = [];
     this.hud.hatchInfo = null;
+    this.lastAction = this.time;
     for (const c of this.views.values()) (c.view.dispose(), c.tag.removeFromParent());
     this.views.clear();
     this.world.setPalette(this.game.day.island);
@@ -226,6 +262,7 @@ export class App {
   private act(fn: () => unknown) {
     this.sfx.unlock();
     if (this.paused) return;
+    this.lastAction = this.time;
     fn();
   }
 
@@ -697,30 +734,37 @@ export class App {
     }
   }
 
-  /** What the player should do next: a short coach line + a bouncing arrow over the target. */
+  /**
+   * What the player should do next: a short coach line, a bouncing 3D arrow over a world target
+   * and an animated tapping hand on the exact thing to tap (world point or HUD element).
+   * The hand shows on the first two days, and on any day when the player has been idle a while.
+   */
   private updateCoach() {
     const g = this.game;
     let text = '';
     let target: THREE.Vector3 | null = null;
+    let hud: string | null = null;
     const nestCount = g.nest.filter(Boolean).length;
     const anyMatch = g.orders.filter((o) => o.def.req.kind !== 'purePair').map((o) => g.deliverable(o.def.id)).find((x) => !!x) ?? null;
-    const selMatch = !!anyMatch;
-    if (g.phase === 'hatching') text = 'הביצה בוקעת...';
+    const meadow = g.list('meadow');
+    if (g.phase === 'hatching') text = this.actionsDone.hatched ? '' : '🥚 בוקע... (לחיצה נוספת = מהר)';
     else if (g.phase !== 'play') text = '';
-    else if (selMatch) {
-      text = `📦 ${g.get(anyMatch!).name} מתאים! לחצו "מסרו" בהזמנה למעלה`;
-      target = VILLAGER_POS.clone().setY(2.3);
-    } else if (nestCount + g.belt.length < 2 && g.list('meadow').length) {
-      const near = g.list('meadow')[0];
-      text = '👆 לחצו על פופי כדי לשאוב אותו לרשת';
-      const c = this.views.get(near.id);
+    else if (anyMatch) {
+      text = `📦 ${g.get(anyMatch).name} מתאים להזמנה! לחצו על הכפתור הגדול`;
+      hud = '.ctabtn';
+    } else if (nestCount + g.belt.length < 2 && meadow.length) {
+      const c = this.views.get(meadow[0].id);
+      text = '👆 לחצו על פופי באחו כדי לשאוב אותו לרשת';
       if (c) target = c.view.root.position.clone().setY(1.75);
     } else if (nestCount < 2 && g.belt.length) {
-      const who = g.selected ? g.get(g.selected).name : g.get(g.belt[0]).name;
-      text = `🪺 לחצו על הקן כדי להושיב את ${who}`;
-      target = NEST_POS.clone().setY(1.4);
-    } else if (g.canHatch()) text = this.actionsDone.hatched ? '' : '🥚 לחצו על הביצה הגדולה!';
-    if (g.day.num > 2 && this.actionsDone.hatched && !selMatch) text = text.startsWith('⭐') ? text : '';
+      const who = g.belt[0];
+      text = `👇 לחצו על ${g.get(who).name} בכיס — והוא יקפוץ לקן`;
+      hud = `.slot[data-id="${who}"]`;
+    } else if (g.canHatch()) {
+      text = this.actionsDone.hatched ? '' : '🥚 לחצו על הביצה!';
+      hud = '.eggbtn';
+    }
+    if (g.day.num > 2 && this.actionsDone.hatched && !anyMatch) text = '';
     this.coach = text;
     this.arrow.visible = !!target;
     if (target) {
@@ -728,7 +772,27 @@ export class App {
       this.arrow.position.y += Math.abs(Math.sin(this.time * 4)) * (this.reduced ? 0.05 : 0.25);
       this.arrow.rotation.y = this.time * 2;
     }
+    // Tapping hand: early days always, later days after 8 s without an action.
+    const idle = this.time - this.lastAction > 8;
+    let hand: { x: number; y: number } | null = null;
+    if ((g.day.num <= 2 || idle) && g.phase === 'play' && !this.paused) {
+      if (hud) hand = this.hud.pointOf(hud);
+      else if (target) {
+        const p = target.clone().setY(target.y - 0.9).project(this.camera);
+        if (p.z < 1 && Math.abs(p.x) < 1 && Math.abs(p.y) < 1) {
+          const r = this.canvas.getBoundingClientRect();
+          hand = { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height };
+        }
+      }
+    }
+    this.hud.setHand(hand);
     (this.world.nest.getObjectByName('nestGlow') as THREE.Mesh).visible = nestCount < 2 && g.belt.length > 0;
+    // Empty nest seats glow so it's obvious two Poofies sit there.
+    this.seats.forEach((m, i) => {
+      m.visible = !g.nest[i] && g.phase !== 'won';
+      m.scale.setScalar(0.55 + Math.sin(this.time * 4 + i) * 0.05);
+      m.quaternion.copy(this.camera.quaternion);
+    });
   }
 
   render() {
@@ -838,6 +902,7 @@ export class App {
 
   private tap(x: number, y: number) {
     const g = this.game;
+    this.lastAction = this.time;
     const hit = this.pick(x, y);
     if (!hit) return;
     if (hit.kind === 'creature' && hit.id) {
@@ -859,6 +924,7 @@ export class App {
 
   // ---------- overlays ----------
   private showModal(name: string, html: string, handlers: Record<string, () => void> = {}) {
+    this.hud.setHand(null);
     this.overlayName = name;
     this.paused = true;
     this.player.clearKeys();
@@ -921,7 +987,7 @@ export class App {
     const wants = g.orders.map((o) => `<div><img src="${portraitURL(o.def.icon, 128)}" alt="">${o.def.titleHe}</div>`).join('');
     const how =
       g.day.num === 1
-        ? `<div class="how"><span>👆 לחצו על פופי — שואבים</span><span>🪺 לחצו על הקן — מושיבים</span><span>🥚 ביצה — בוקעים</span><span>📦 מסרו להזמנה</span></div><p style="font-size:14px;opacity:.8">${matchMedia('(pointer: coarse)').matches ? 'גוררים באצבע כדי להסתכל מסביב' : 'גוררים כדי להסתכל מסביב · WASD כדי ללכת (לא חובה)'}</p>`
+        ? `<div class="how"><span>👆 לחצו על פופי באחו — שואבים</span><span>👇 לחצו עליו בכיס — קופץ לקן</span><span>🥚 ביצה — בוקעים</span><span>📦 מסרו לסבתא</span></div><p style="font-size:14px;opacity:.8">${matchMedia('(pointer: coarse)').matches ? 'גוררים באצבע כדי להסתכל מסביב' : 'גוררים כדי להסתכל מסביב · WASD כדי ללכת (לא חובה)'}</p>`
         : '';
     this.hudEl.hidden = false;
     this.showModal(

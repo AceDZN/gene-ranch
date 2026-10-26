@@ -23,17 +23,17 @@ Ports: dev 5221, preview 4221 (strictPort; moved from the originally planned 520
 | Action | Mouse / touch | Keyboard |
 |---|---|---|
 | Catch a Gnoomie (vacuum net) | tap it | — |
-| Put the selected Gnoomie in the nest | tap the nest, or "🪺 לקן" on its card | N |
-| Take a parent back | tap it in the nest | — |
-| Lay / hatch an egg | big egg button | Space / E |
+| Seat a Poofie in the nest | tap its portrait in the belt (one tap), or tap the nest | N |
+| Take a parent back | tap it in the nest, or "↩ חזרה לכיס" on its card | — |
+| Lay / hatch an egg (tap again to skip ahead) | big egg button | Space / E |
 | Select a creature in the belt | tap its portrait | 1–6 |
-| Deliver to an order | "📦 מסרו" on the order card, or tap the board | — |
+| Deliver to an order | the big "📦 מסרו את … לסבתא" button that appears, or tap the board | — |
 | Look around | drag | ← → |
 | Walk (optional) | tap the ground | WASD / ↑ ↓ |
 | Hint (days 1–5) | 💡 | H |
 | Pause | ⏸ | Esc / P |
 
-Mute and reduced-motion toggles are on the title and pause screens.
+Mute and reduced-motion toggles are on the title and pause screens. On days 1–2 (and whenever you've been idle for 8 s) an animated hand taps the exact next thing to press; empty nest seats glow with a "+".
 
 ## What's implemented
 

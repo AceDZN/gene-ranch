@@ -1138,3 +1138,74 @@ button {
     display: none;
   }
 }
+
+/* ---- Intuitive-UI pass: tapping hand + one big delivery button ---- */
+.hand {
+  position: absolute;
+  font-size: 56px;
+  line-height: 1;
+  pointer-events: none !important;
+  z-index: 20;
+  filter: drop-shadow(0 4px 6px rgba(40, 10, 60, 0.45));
+  animation: tap 1.1s ease-in-out infinite;
+  transform-origin: 14px 4px;
+}
+.hand[hidden] {
+  display: none;
+}
+@keyframes tap {
+  0%,
+  100% {
+    transform: translate(10px, 26px) scale(1);
+  }
+  45% {
+    transform: translate(0, 0) scale(0.92);
+  }
+  55% {
+    transform: translate(0, 0) scale(0.92);
+  }
+}
+.ctabtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(#2fc3b6, #17988f);
+  color: #fff;
+  font-weight: 700;
+  font-size: 22px;
+  padding: 10px 22px 10px 16px;
+  border-radius: 26px;
+  border: 4px solid #e9fffc;
+  box-shadow: 0 0 0 4px rgba(72, 201, 191, 0.35), var(--shadow);
+  animation: bounce 1s infinite;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.ctabtn img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fff;
+}
+.ctabtn span {
+  width: 100%;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+.cta:empty {
+  display: none;
+}
+@media (max-width: 760px) {
+  .ctabtn {
+    font-size: 17px;
+    padding: 8px 14px;
+  }
+  .hand {
+    font-size: 44px;
+  }
+}
+.eggbtn span {
+  white-space: nowrap;
+  font-size: 13px;
+}

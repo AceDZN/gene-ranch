@@ -277,7 +277,8 @@ export class Game {
 
   // ---------- actions ----------
   select(id: string | null) {
-    if (id && this.creatures.get(id)?.loc !== 'belt') return;
+    const loc = id ? this.creatures.get(id)?.loc : null;
+    if (id && loc !== 'belt' && loc !== 'nest') return;
     this.selected = id;
   }
 
@@ -316,7 +317,8 @@ export class Game {
     this.nest[s] = id;
     c.loc = 'nest';
     this.belt = this.belt.filter((x) => x !== id);
-    if (this.selected === id) this.selected = this.belt[0] ?? null;
+    // Keep the seated creature selected so its card stays on screen.
+    this.selected = id;
     this.emit({ type: 'placed', id, slot: s });
     return true;
   }

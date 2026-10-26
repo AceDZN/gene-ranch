@@ -89,9 +89,8 @@ for (const day of days) {
       s = await st();
       if (s.nest.some((n) => n && n.id === id)) continue;
       await toBelt(id);
+      // One tap on the belt portrait seats it in the nest.
       await clickSel(`.slot[data-id="${id}"]`);
-      await adv(50);
-      await clickAt(await page.evaluate(() => window.__app.screenOfNest()));
       await adv(700);
     }
   };
@@ -107,15 +106,12 @@ for (const day of days) {
   };
   const deliverAll = async () => {
     for (let i = 0; i < 3; i++) {
-      if (!(await page.$('.deliver'))) return;
+      if (!(await page.$('.ctabtn'))) return;
       if (!(await page.$('.shot-delivered-taken'))) {
         await shot('ready-to-deliver');
         await page.evaluate(() => document.body.classList.add('shot-delivered-taken'));
       }
-      // The most specific order is listed last.
-      const all = await page.$$('.deliver');
-      const b = await all[all.length - 1].boundingBox();
-      if (b) await clickAt({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
+      await clickSel('.ctabtn');
       await adv(2200);
       await dismiss();
     }
@@ -170,18 +166,17 @@ for (const day of days) {
       await clickSel(`.slot[data-id="${c}"]`);
       await adv(50);
       await shot('ready-to-deliver');
-      await clickSel('.deliver');
+      await clickSel('.ctabtn');
       await adv(2200);
       await dismiss();
     }
   } else if (day === 4) {
     await setNest('zebra', 'nekudi');
     for (let i = 0; i < 3; i++) await hatch();
-    s = await st();
-    const both = s.belt.filter((b) => b.pheno.pattern === 'both').map((b) => b.id);
-    await clickSel(`.slot[data-id="${both[0]}"]`);
     await deliverAll();
-    await setNest(both[1], both[2]);
+    s = await st();
+    const both = [...s.belt, ...s.nest.filter(Boolean)].filter((b) => b.pheno.pattern === 'both' && b.id.startsWith('baby')).map((b) => b.id);
+    await setNest(both[0], both[1]);
     s = await until((x) => x.phase === 'won', 12);
   } else if (day === 5) {
     await setNest('yam', 'perach');

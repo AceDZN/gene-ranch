@@ -7,6 +7,7 @@ import { portraitURL } from '../scene/look';
 export interface HudHandlers {
   select(id: string): void;
   place(id: string): void;
+  unplace(id: string): void;
   release(id: string): void;
   deliver(order: string, id: string): void;
   hatch(): void;
@@ -65,11 +66,12 @@ export class Hud {
       <div class="tr"></div>
       <div class="coach"></div>
       <div class="bl"></div>
-      <div class="bottom"><div class="hatchcard"></div><div class="belt"></div></div>
+      <div class="bottom"><div class="hatchcard"></div><div class="cta"></div><div class="belt"></div></div>
+      <div class="hand" hidden>👆</div>
       <div class="side"><div class="cardwrap"></div></div>
       <div class="log"></div>
       <div class="chip"></div>`;
-    for (const k of ['tl', 'tr', 'coach', 'bl', 'cardwrap', 'hatchcard', 'belt', 'log', 'chip']) this.els[k] = root.querySelector('.' + k)!;
+    for (const k of ['tl', 'tr', 'coach', 'bl', 'cardwrap', 'hatchcard', 'cta', 'belt', 'log', 'chip', 'hand']) this.els[k] = root.querySelector('.' + k)!;
     root.addEventListener('click', (e) => {
       const t = (e.target as HTMLElement).closest('[data-act]') as HTMLElement | null;
       if (!t || (t as HTMLButtonElement).disabled) return;
@@ -78,6 +80,7 @@ export class Hud {
       const id = t.dataset.id ?? '';
       if (a === 'select') this.h.select(id);
       else if (a === 'place') this.h.place(id);
+      else if (a === 'unplace') this.h.unplace(id);
       else if (a === 'release') this.h.release(id);
       else if (a === 'deliver') this.h.deliver(t.dataset.order!, id);
       else if (a === 'hatch') (this.hatchInfo = null), this.h.hatch();
@@ -92,6 +95,8 @@ export class Hud {
     });
     // Keep HUD pointer events from reaching the 3D canvas.
     root.addEventListener('pointerdown', (e) => e.stopPropagation());
+    // The hatch log starts folded away on big screens (📊 opens it) to keep the view clean.
+    this.els.log.classList.add('closed');
   }
 
   private set(k: string, html: string) {
@@ -158,8 +163,10 @@ export class Hud {
     // Selected creature card.
     // On phones the hatch explanation takes the card's place while it's up.
     const narrow = window.innerWidth <= 760;
-    this.set('cardwrap', sel && sel.loc === 'belt' && !(narrow && this.hatchInfo && g.phase === 'play') ? this.cardHtml(g, sel.id) : '');
-    this.set('hatchcard', this.hatchInfo && g.phase === 'play' ? this.hatchInfo.html : '');
+    const cta = this.ctaHtml(g);
+    this.set('cardwrap', sel && (sel.loc === 'belt' || sel.loc === 'nest') && !(narrow && (this.hatchInfo || cta) && g.phase === 'play') ? this.cardHtml(g, sel.id) : '');
+    this.set('hatchcard', this.hatchInfo && g.phase === 'play' && !cta ? this.hatchInfo.html : '');
+    this.set('cta', cta);
     // Hatch log.
     this.set('log', this.logHtml(g));
     // Side chips.
@@ -194,7 +201,6 @@ export class Hud {
     return `<div class="order ${o.filled ? 'filled' : ''} ${ready ? 'ready' : ''}">
       <img src="${icon}" alt="">
       <div><div class="ot">${esc(o.def.titleHe)}</div><div class="od">${od}</div></div>
-      ${ready ? `<button class="deliver" data-act="deliver" data-order="${o.def.id}" data-id="${selId}">📦 מסרו את ${esc(g.get(selId!).name)}</button>` : ''}
     </div>`;
   }
 
@@ -218,16 +224,50 @@ export class Hud {
     const sexTxt = `<div class="note">${c.sex === 'f' ? '♀ נקבה' : '♂ זכר'}</div>`;
     const parents = c.parents ? `<div class="note">הורים: ${c.parents.map((pid) => esc(g.get(pid).name)).join(' × ')}${c.env === 'cold' ? ' · גדל בקן הקר ❄️' : ''}</div>` : '';
     const tag = c.tagHe ? `<span class="tag">${esc(c.tagHe)}</span>` : '';
-    const canPlace = g.phase === 'play' && (!g.nest[0] || !g.nest[1]);
+    const inNest = c.loc === 'nest';
     return `<div class="card">
-      <div class="ch">${esc(c.name)}${tag}</div>
+      <div class="ch">${esc(c.name)}${tag}${inNest ? ' <span class="tag">🪺 בקן</span>' : ''}</div>
       <img src="${portraitURL(visibleTraits(g, p), 128)}" alt="">
       <div class="rows">${rows}${parents}${sexTxt}</div>
       <div class="acts">
-        <button data-act="place" data-id="${id}" ${canPlace ? '' : 'disabled'}>🪺 לקן</button>
-        <button class="ghost" data-act="release" data-id="${id}">🌿 שחרור</button>
+        ${inNest ? `<button class="ghost" data-act="unplace" data-id="${id}">↩ חזרה לכיס</button>` : `<button class="ghost" data-act="release" data-id="${id}">🌿 שחרור לאחו</button>`}
       </div>
     </div>`;
+  }
+
+  /** One big, obvious delivery button whenever a Poofie can fill an order right now. */
+  private ctaHtml(g: Game): string {
+    if (g.phase !== 'play') return '';
+    // The most specific order first (a glowing straight-tailed baby belongs to "glow AND straight").
+    const spec = (o: OrderState) => (o.def.req.kind === 'phenotype' || o.def.req.kind === 'parentPheno' ? Object.keys(o.def.req.pheno).length : 1);
+    for (const o of [...g.orders].sort((a, b) => spec(b) - spec(a))) {
+      const id = g.deliverable(o.def.id);
+      if (!id) continue;
+      const name = esc(g.get(id).name);
+      return `<button class="ctabtn" data-act="deliver" data-order="${o.def.id}" data-id="${id}"><img src="${portraitURL(visibleTraits(g, g.pheno(id)), 64)}" alt="">📦 מסרו את ${name} לסבתא<span>${esc(o.def.titleHe)}</span></button>`;
+    }
+    return '';
+  }
+
+  /** Place the tutorial hand so its fingertip touches (x, y); null hides it. */
+  setHand(p: { x: number; y: number } | null) {
+    const h = this.els.hand;
+    if (!p) {
+      h.hidden = true;
+      return;
+    }
+    h.hidden = false;
+    const r = this.root.getBoundingClientRect();
+    h.style.left = `${p.x - r.left - 14}px`;
+    h.style.top = `${p.y - r.top - 4}px`;
+  }
+
+  /** Screen point of a HUD element (for the tutorial hand). */
+  pointOf(selector: string): { x: number; y: number } | null {
+    const el = this.root.querySelector(selector) as HTMLElement | null;
+    if (!el || el.offsetParent === null) return null;
+    const b = el.getBoundingClientRect();
+    return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
   }
 
   /** Build the hatch explanation card: mini Punnett per gene with the cells that match the baby lit. */
