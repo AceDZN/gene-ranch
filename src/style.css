@@ -1209,3 +1209,25 @@ button {
   white-space: nowrap;
   font-size: 13px;
 }
+/* Card actions: primary (seat/give), honest warning for a gamble, quiet ghost. */
+.side .card .acts {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0 10px;
+}
+.card .acts button.give {
+  background: linear-gradient(#ffb84d, #f08a24);
+}
+.card .acts button.warn {
+  background: #fff3d6;
+  color: #8a4b00;
+  border: 2px dashed #f0a020;
+}
+.card .acts button small {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+}
+.card .acts button {
+  white-space: normal;
+}

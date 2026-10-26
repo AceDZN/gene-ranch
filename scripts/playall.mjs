@@ -49,6 +49,8 @@ for (const day of days) {
     if (s.nest.some((n) => n && n.id === id)) {
       const p = await page.evaluate((i) => window.__app.screenOf(i), id);
       if (p) await clickAt(p);
+      await adv(100);
+      await clickSel(`[data-act="unplace"][data-id="${id}"]`);
       await adv(600);
       s = await st();
       if (s.belt.some((b) => b.id === id)) return;
@@ -83,14 +85,18 @@ for (const day of days) {
     for (const n of s.nest) if (n && n.id !== a && n.id !== b) {
       const p = await page.evaluate((i) => window.__app.screenOf(i), n.id);
       if (p) await clickAt(p);
+      await adv(100);
+      await clickSel(`[data-act="unplace"][data-id="${n.id}"]`);
       await adv(600);
     }
     for (const id of [a, b]) {
       s = await st();
       if (s.nest.some((n) => n && n.id === id)) continue;
       await toBelt(id);
-      // One tap on the belt portrait seats it in the nest.
+      // Tap the portrait to see its card, then "לקן" on the card.
       await clickSel(`.slot[data-id="${id}"]`);
+      await adv(50);
+      await clickSel(`[data-act="place"][data-id="${id}"]`);
       await adv(700);
     }
   };
@@ -104,14 +110,34 @@ for (const day of days) {
     await adv(1800);
     return dismiss();
   };
+  /** Select a Poofie (portrait if in the belt, 3D tap if in the nest). */
+  const selectC = async (id) => {
+    const s2 = await st();
+    if (s2.belt.some((b) => b.id === id)) await clickSel(`.slot[data-id="${id}"]`);
+    else {
+      const p = await page.evaluate((i) => window.__app.screenOf(i), id);
+      if (p) await clickAt(p);
+    }
+    await adv(80);
+  };
   const deliverAll = async () => {
-    for (let i = 0; i < 3; i++) {
-      if (!(await page.$('.ctabtn'))) return;
+    for (let i = 0; i < 4; i++) {
+      // The glowing order card tells the player something fits; find which Poofie (non-pure-pair orders).
+      const id = await page.evaluate(() => {
+        const g = window.__app.game;
+        for (const o of g.orders) if (o.def.req.kind !== 'purePair') { const d = g.deliverable(o.def.id); if (d) return d; }
+        return null;
+      });
+      if (!id) return;
+      await selectC(id);
+      if (!(await page.$('.card [data-act="deliver"]'))) return;
       if (!(await page.$('.shot-delivered-taken'))) {
         await shot('ready-to-deliver');
         await page.evaluate(() => document.body.classList.add('shot-delivered-taken'));
       }
-      await clickSel('.ctabtn');
+      const all = await page.$$('.card [data-act="deliver"]');
+      const b = await all[all.length - 1].boundingBox();
+      if (b) await clickAt({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
       await adv(2200);
       await dismiss();
     }
@@ -163,10 +189,9 @@ for (const day of days) {
     }
     for (const c of clean.slice(0, 2)) {
       await toBelt(c);
-      await clickSel(`.slot[data-id="${c}"]`);
-      await adv(50);
+      await selectC(c);
       await shot('ready-to-deliver');
-      await clickSel('.ctabtn');
+      await clickSel(`.card [data-act="deliver"][data-id="${c}"]`);
       await adv(2200);
       await dismiss();
     }

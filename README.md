@@ -23,11 +23,11 @@ Ports: dev 5221, preview 4221 (strictPort; moved from the originally planned 520
 | Action | Mouse / touch | Keyboard |
 |---|---|---|
 | Catch a Gnoomie (vacuum net) | tap it | — |
-| Seat a Poofie in the nest | tap its portrait in the belt (one tap), or tap the nest | N |
-| Take a parent back | tap it in the nest, or "↩ חזרה לכיס" on its card | — |
+| See a Poofie's stats | tap it in the belt or in the nest | 1–6 |
+| Seat a Poofie in the nest | "🪺 לקן" on its card, or tap the nest | N |
+| Take a parent back | "↩ חזרה לכיס" on its card | — |
 | Lay / hatch an egg (tap again to skip ahead) | big egg button | Space / E |
-| Select a creature in the belt | tap its portrait | 1–6 |
-| Deliver to an order | the big "📦 מסרו את … לסבתא" button that appears, or tap the board | — |
+| Deliver to an order | "📦 מסרו לסבתא" on the Poofie's card (a dashed ⚠️ button means it's an untested gamble), or tap the board | — |
 | Look around | drag | ← → |
 | Walk (optional) | tap the ground | WASD / ↑ ↓ |
 | Hint (days 1–5) | 💡 | H |

@@ -66,12 +66,12 @@ export class Hud {
       <div class="tr"></div>
       <div class="coach"></div>
       <div class="bl"></div>
-      <div class="bottom"><div class="hatchcard"></div><div class="cta"></div><div class="belt"></div></div>
+      <div class="bottom"><div class="hatchcard"></div><div class="belt"></div></div>
       <div class="hand" hidden>👆</div>
       <div class="side"><div class="cardwrap"></div></div>
       <div class="log"></div>
       <div class="chip"></div>`;
-    for (const k of ['tl', 'tr', 'coach', 'bl', 'cardwrap', 'hatchcard', 'cta', 'belt', 'log', 'chip', 'hand']) this.els[k] = root.querySelector('.' + k)!;
+    for (const k of ['tl', 'tr', 'coach', 'bl', 'cardwrap', 'hatchcard', 'belt', 'log', 'chip', 'hand']) this.els[k] = root.querySelector('.' + k)!;
     root.addEventListener('click', (e) => {
       const t = (e.target as HTMLElement).closest('[data-act]') as HTMLElement | null;
       if (!t || (t as HTMLButtonElement).disabled) return;
@@ -163,10 +163,10 @@ export class Hud {
     // Selected creature card.
     // On phones the hatch explanation takes the card's place while it's up.
     const narrow = window.innerWidth <= 760;
-    const cta = this.ctaHtml(g);
-    this.set('cardwrap', sel && (sel.loc === 'belt' || sel.loc === 'nest') && !(narrow && (this.hatchInfo || cta) && g.phase === 'play') ? this.cardHtml(g, sel.id) : '');
-    this.set('hatchcard', this.hatchInfo && g.phase === 'play' && !cta ? this.hatchInfo.html : '');
-    this.set('cta', cta);
+    // The selected Poofie's stats card always wins; on phones the hatch card yields to it.
+    const showCard = !!sel && (sel.loc === 'belt' || sel.loc === 'nest');
+    this.set('cardwrap', showCard ? this.cardHtml(g, sel!.id) : '');
+    this.set('hatchcard', this.hatchInfo && g.phase === 'play' && !(narrow && showCard) ? this.hatchInfo.html : '');
     // Hatch log.
     this.set('log', this.logHtml(g));
     // Side chips.
@@ -230,23 +230,25 @@ export class Hud {
       <img src="${portraitURL(visibleTraits(g, p), 128)}" alt="">
       <div class="rows">${rows}${parents}${sexTxt}</div>
       <div class="acts">
-        ${inNest ? `<button class="ghost" data-act="unplace" data-id="${id}">↩ חזרה לכיס</button>` : `<button class="ghost" data-act="release" data-id="${id}">🌿 שחרור לאחו</button>`}
+        ${this.cardActions(g, id)}
       </div>
     </div>`;
   }
 
-  /** One big, obvious delivery button whenever a Poofie can fill an order right now. */
-  private ctaHtml(g: Game): string {
-    if (g.phase !== 'play') return '';
-    // The most specific order first (a glowing straight-tailed baby belongs to "glow AND straight").
-    const spec = (o: OrderState) => (o.def.req.kind === 'phenotype' || o.def.req.kind === 'parentPheno' ? Object.keys(o.def.req.pheno).length : 1);
-    for (const o of [...g.orders].sort((a, b) => spec(b) - spec(a))) {
-      const id = g.deliverable(o.def.id);
-      if (!id) continue;
-      const name = esc(g.get(id).name);
-      return `<button class="ctabtn" data-act="deliver" data-order="${o.def.id}" data-id="${id}"><img src="${portraitURL(visibleTraits(g, g.pheno(id)), 64)}" alt="">📦 מסרו את ${name} לסבתא<span>${esc(o.def.titleHe)}</span></button>`;
+  /** Actions for the selected Poofie: seat it, deliver it (with an honest warning), take it back, release it. */
+  private cardActions(g: Game, id: string): string {
+    const c = g.get(id);
+    const out: string[] = [];
+    if (c.loc === 'belt' && g.phase === 'play' && (!g.nest[0] || !g.nest[1])) out.push(`<button data-act="place" data-id="${id}">🪺 לקן</button>`);
+    for (const o of g.orders) {
+      if (o.filled || !g.canDeliver(o.def.id, id)) continue;
+      const req = o.def.req;
+      const gamble = req.kind === 'purePair' && g.streak(id, req.gene) < 2;
+      out.push(`<button class="${gamble ? 'warn' : 'give'}" data-act="deliver" data-order="${o.def.id}" data-id="${id}">📦 מסרו לסבתא: ${esc(o.def.titleHe)}${gamble ? '<small>⚠️ עוד לא נבדק — זה הימור</small>' : ''}</button>`);
     }
-    return '';
+    if (c.loc === 'nest') out.push(`<button class="ghost" data-act="unplace" data-id="${id}">↩ חזרה לכיס</button>`);
+    else out.push(`<button class="ghost" data-act="release" data-id="${id}">🌿 שחרור לאחו</button>`);
+    return out.join('');
   }
 
   /** Place the tutorial hand so its fingertip touches (x, y); null hides it. */

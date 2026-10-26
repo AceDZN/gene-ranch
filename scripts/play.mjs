@@ -77,10 +77,10 @@ while (s.phase === 'play' && s.eggs > 0 && hatches < 12) {
     await adv(100);
     s = await state();
   }
-  const ready = await page.$('.ctabtn');
+  const ready = await page.$('.card [data-act="deliver"]');
   if (ready) {
     await shot('08-ready-to-deliver');
-    await clickSel('.ctabtn');
+    await clickSel('.card [data-act="deliver"]');
     await adv(2500);
     await shot('09-delivered');
     s = await state();

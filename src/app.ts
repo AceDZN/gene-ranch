@@ -169,13 +169,8 @@ export class App {
     this.scene.add(this.sweat);
 
     this.hud = new Hud(hudEl, {
-      // One tap: a Poofie in the belt hops into a free nest seat; otherwise it's just selected.
-      select: (id) => this.act(() => {
-        const g = this.game;
-        if (g.get(id).loc === 'belt' && g.phase === 'play' && (!g.nest[0] || !g.nest[1])) g.place(id);
-        else g.select(id);
-        this.lastAction = this.time;
-      }),
+      // Tapping a Poofie always shows its stats card first; every action lives on the card.
+      select: (id) => this.act(() => this.game.select(id)),
       unplace: (id) => this.act(() => {
         const g = this.game;
         g.unplace(g.nest[0] === id ? 0 : 1);
@@ -745,21 +740,27 @@ export class App {
     let target: THREE.Vector3 | null = null;
     let hud: string | null = null;
     const nestCount = g.nest.filter(Boolean).length;
+    // Only visible matches are worth pointing at; a pure pair is the player's own judgement call.
     const anyMatch = g.orders.filter((o) => o.def.req.kind !== 'purePair').map((o) => g.deliverable(o.def.id)).find((x) => !!x) ?? null;
     const meadow = g.list('meadow');
+    const sel = g.selected ? g.get(g.selected) : null;
     if (g.phase === 'hatching') text = this.actionsDone.hatched ? '' : '🥚 בוקע... (לחיצה נוספת = מהר)';
     else if (g.phase !== 'play') text = '';
-    else if (anyMatch) {
-      text = `📦 ${g.get(anyMatch).name} מתאים להזמנה! לחצו על הכפתור הגדול`;
-      hud = '.ctabtn';
+    else if (anyMatch && !this.actionsDone.delivered) {
+      text = `⭐ ${g.get(anyMatch).name} מתאים להזמנה — אפשר למסור אותו מהכרטיס שלו`;
+      hud = g.selected === anyMatch ? '.card [data-act="deliver"]' : `.slot[data-id="${anyMatch}"]`;
     } else if (nestCount + g.belt.length < 2 && meadow.length) {
       const c = this.views.get(meadow[0].id);
       text = '👆 לחצו על פופי באחו כדי לשאוב אותו לרשת';
       if (c) target = c.view.root.position.clone().setY(1.75);
     } else if (nestCount < 2 && g.belt.length) {
-      const who = g.belt[0];
-      text = `👇 לחצו על ${g.get(who).name} בכיס — והוא יקפוץ לקן`;
-      hud = `.slot[data-id="${who}"]`;
+      if (sel && sel.loc === 'belt') {
+        text = `🪺 בכרטיס של ${sel.name}: לחצו "לקן"`;
+        hud = '.card [data-act="place"]';
+      } else {
+        text = '👇 לחצו על פופי בכיס כדי לראות אותו';
+        hud = `.slot[data-id="${g.belt[0]}"]`;
+      }
     } else if (g.canHatch()) {
       text = this.actionsDone.hatched ? '' : '🥚 לחצו על הביצה!';
       hud = '.eggbtn';
@@ -908,7 +909,7 @@ export class App {
     if (hit.kind === 'creature' && hit.id) {
       const c = g.get(hit.id);
       if (c.loc === 'meadow') g.catch(hit.id);
-      else if (c.loc === 'nest') g.unplace(g.nest[0] === hit.id ? 0 : 1);
+      else if (c.loc === 'nest') g.select(hit.id);
     } else if (hit.kind === 'nest') {
       const id = g.selected ?? g.belt[0];
       if (id) {
